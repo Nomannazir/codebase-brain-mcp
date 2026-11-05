@@ -6,6 +6,12 @@ An [MCP](https://modelcontextprotocol.io) server that gives AI agents a **cited,
 Point it at a local folder or a public git URL. Claude, Cursor or any MCP client can then ask questions about the
 code and get answers backed by exact `path:start-end` citations.
 
+![Claude Code using Project Brain to explain the history, impact and docs of a function](assets/demo.gif)
+
+*Claude Code asks why `TimestampSigner.unsign` looks the way it does, what breaks if it changes, and whether its
+docs are current. Project Brain answers with commits, callers, tests and doc findings, all cited. (Waiting time
+sped up.)*
+
 ## Why it's different
 
 - **Code-aware chunking.** Python is split by function, class and method using the real syntax tree, Markdown by
