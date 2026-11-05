@@ -10,7 +10,8 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
-from .brain import Brain, BrainError, Hit
+from .brain import Brain, BrainError, Hit, HistoryReport
+from .history import Commit
 from .config import load_settings
 from .sources import SourceError
 
@@ -18,7 +19,8 @@ INSTRUCTIONS = """\
 Project Brain indexes code repositories and answers questions about them with citations.
 Start with index_repo (a local path or an https git URL). Then use ask_codebase for questions,
 search for raw hybrid search, and read_lines to open the exact lines a citation points at.
-Always cite sources as path:start-end."""
+For "why is it like this?" questions, use explain_history on a symbol or line range, and
+search_history to find commits by topic. Cite code as path:start-end and commits by short sha."""
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 MAX_RESULTS = 25
 SNIPPET_CHARS = 1_800
@@ -33,6 +35,8 @@ class IndexResult(BaseModel):
     files_unchanged: int
     files_removed: int
     chunks_total: int
+    commits_added: int
+    commits_total: int
     seconds: float
     full_rebuild: bool
 
@@ -55,11 +59,53 @@ class SearchResult(BaseModel):
     results: list[Source]
 
 
+class CommitInfo(BaseModel):
+    sha: str = Field(description="Short sha, ready to cite.")
+    author: str
+    date: str
+    subject: str
+    body: str
+    pull_requests: list[int]
+
+
 class AskResult(BaseModel):
     repo: str
     question: str
     instructions: str
     sources: list[Source]
+    related_commits: list[CommitInfo] = Field(description="Commits whose messages match the question.")
+
+
+class Change(BaseModel):
+    commit: CommitInfo
+    diff: str = Field(description="The part of the commit's diff that touched the range.")
+
+
+class Authorship(BaseModel):
+    sha: str
+    author: str
+    date: str
+    subject: str
+    lines: int = Field(description="How many of the current lines come from this commit.")
+
+
+class PullRequestInfo(BaseModel):
+    number: int
+    url: str
+    title: str | None
+    body: str | None
+    state: str | None
+    merged_at: str | None
+
+
+class HistoryResult(BaseModel):
+    repo: str
+    citation: str
+    symbol: str | None
+    instructions: str
+    authorship: list[Authorship]
+    changes: list[Change] = Field(description="Commits that changed these lines, newest first.")
+    pull_requests: list[PullRequestInfo]
 
 
 class RepoSummary(BaseModel):
@@ -69,6 +115,7 @@ class RepoSummary(BaseModel):
     indexed_at: str
     files: int
     chunks: int
+    commits: int
     languages: dict[str, int]
 
 
@@ -104,6 +151,7 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         """Gather the code and docs most relevant to a question, as numbered, cited sources.
         Answer from these sources only, citing each claim as path:start-end."""
         hits = await _search(brain, question, repo, k, None, None)
+        commits = await _call(lambda: brain.search_history(question, repo, 3))
         instructions = (
             "Answer the question using only these sources. Cite every claim as path:start-end. "
             "If the sources don't contain the answer, say so and suggest a better search or a file to read "
@@ -112,7 +160,23 @@ def build_server(brain: Brain | None = None) -> MCPServer:
             "Nothing relevant was found. Try search with different keywords, or check the repo is indexed."
         )
         return AskResult(repo=brain.resolve_repo(repo), question=question, instructions=instructions,
-                         sources=[_source(h) for h in hits])
+                         sources=[_source(h) for h in hits], related_commits=[_commit(c) for c in commits])
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    async def explain_history(repo: str | None = None, symbol: str | None = None, path: str | None = None,
+                              start_line: int | None = None, end_line: int | None = None,
+                              max_commits: int = 8) -> HistoryResult:
+        """Why code looks the way it does. Give a `symbol` (e.g. "unsign" or "Signer.sign"), or a `path`
+        with optional line range. Returns who wrote the current lines, every commit that changed them
+        (with the relevant diff), and the pull requests behind those commits."""
+        report = await _call(lambda: brain.explain_history(repo, path, symbol, start_line, end_line, max_commits))
+        return _history(report)
+
+    @server.tool(annotations=READ_ONLY)
+    async def search_history(query: str, repo: str | None = None, k: int = 5) -> list[CommitInfo]:
+        """Find commits by what their messages say, e.g. "fix timezone" or "drop python 3.8"."""
+        commits = await _call(lambda: brain.search_history(query, repo, max(1, min(k, MAX_RESULTS))))
+        return [_commit(c) for c in commits]
 
     @server.tool(annotations=READ_ONLY)
     async def read_lines(path: str, start: int, end: int, repo: str | None = None) -> str:
@@ -150,10 +214,37 @@ def build_server(brain: Brain | None = None) -> MCPServer:
 async def _search(brain: Brain, query: str, repo: str | None, k: int, path_prefix: str | None,
                   kinds: list[str] | None) -> list[Hit]:
     k = max(1, min(k, MAX_RESULTS))
+    return await _call(lambda: brain.search(query, repo, k, path_prefix, kinds))
+
+
+async def _call(fn):
+    """Run blocking engine work off the event loop; user-facing errors become tool errors."""
     try:
-        return await anyio.to_thread.run_sync(lambda: brain.search(query, repo, k, path_prefix, kinds))
+        return await anyio.to_thread.run_sync(fn)
     except BrainError as exc:
         raise ToolError(str(exc)) from exc
+
+
+def _commit(commit: Commit) -> CommitInfo:
+    return CommitInfo(sha=commit.sha[:10], author=commit.author, date=commit.date, subject=commit.subject,
+                      body=commit.body, pull_requests=list(commit.prs))
+
+
+def _history(report: HistoryReport) -> HistoryResult:
+    citation = f"{report.path}:{report.start_line}-{report.end_line}"
+    instructions = (
+        "Explain why this code looks the way it does, oldest change first: what each commit changed and the "
+        "reason its message or PR gives. Cite commits by short sha and code as path:start-end. If the messages "
+        "don't say why, say so rather than guessing."
+        if report.changes else "No commits changed these lines (they may be uncommitted)."
+    )
+    return HistoryResult(
+        repo=report.repo, citation=citation, symbol=report.symbol, instructions=instructions,
+        authorship=[Authorship(sha=b.sha[:10], author=b.author, date=b.date, subject=b.subject, lines=b.lines)
+                    for b in report.blame],
+        changes=[Change(commit=_commit(c.commit), diff=c.diff) for c in report.changes],
+        pull_requests=[PullRequestInfo(**pr.__dict__) for pr in report.pull_requests],
+    )
 
 
 def _source(hit: Hit) -> Source:
@@ -166,4 +257,4 @@ def _source(hit: Hit) -> Source:
 
 def _summary(info) -> RepoSummary:
     return RepoSummary(name=info.name, source=info.source, commit=info.commit, indexed_at=info.indexed_at,
-                       files=info.files, chunks=info.chunks, languages=info.languages)
+                       files=info.files, chunks=info.chunks, commits=info.commits, languages=info.languages)

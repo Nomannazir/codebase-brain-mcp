@@ -10,7 +10,8 @@ async def test_tools_are_listed_with_read_only_hints(brain):
     async with Client(build_server(brain)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
 
-    assert set(tools) == {"index_repo", "search", "ask_codebase", "read_lines", "list_repos"}
+    assert set(tools) == {"index_repo", "search", "ask_codebase", "read_lines", "list_repos", "explain_history",
+                          "search_history"}
     assert tools["search"].annotations.read_only_hint is True
     assert tools["index_repo"].annotations.read_only_hint is False
 
@@ -42,3 +43,15 @@ async def test_prompt_and_resource(brain, sample_repo):
 
     assert "ask_codebase" in prompt.messages[0].content.text
     assert "sample-app" in resource.contents[0].text
+
+
+async def test_explain_history_tool_returns_structured_changes(brain, git_repo):
+    async with Client(build_server(brain)) as client:
+        await client.call_tool("index_repo", {"source": str(git_repo)})
+        result = await client.call_tool("explain_history", {"symbol": "discount"})
+        asked = await client.call_tool("ask_codebase", {"question": "why are discounts rounded?"})
+
+    data = result.structured_content
+    assert data["citation"] == "pricing.py:1-2"
+    assert len(data["changes"]) == 3 and len(data["changes"][0]["commit"]["sha"]) == 10
+    assert asked.structured_content["related_commits"][0]["pull_requests"] == [12]

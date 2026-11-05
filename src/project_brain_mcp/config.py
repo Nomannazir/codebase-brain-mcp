@@ -22,6 +22,11 @@ class Settings:
     max_file_bytes: int
     """Files larger than this are skipped; they are almost always generated or data."""
 
+    github_token: str | None = None
+    """Optional. Only used to read PR titles and descriptions (raises the API rate limit)."""
+
+    fetch_pull_requests: bool = True
+
     @property
     def index_dir(self) -> Path:
         return self.home / "indexes"
@@ -38,4 +43,6 @@ def load_settings() -> Settings:
         embedder=os.environ.get("PROJECT_BRAIN_EMBEDDER", "fastembed"),
         embed_model=os.environ.get("PROJECT_BRAIN_EMBED_MODEL", DEFAULT_EMBED_MODEL),
         max_file_bytes=int(os.environ.get("PROJECT_BRAIN_MAX_FILE_BYTES", DEFAULT_MAX_FILE_BYTES)),
+        github_token=os.environ.get("GITHUB_TOKEN") or None,
+        fetch_pull_requests=os.environ.get("PROJECT_BRAIN_FETCH_PRS", "1") != "0",
     )

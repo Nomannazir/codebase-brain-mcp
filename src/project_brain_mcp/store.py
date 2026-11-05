@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sqlite3
 import threading
@@ -11,6 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from .chunking import Chunk
+from .history import Commit, PullRequest
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -27,6 +29,16 @@ CREATE TABLE IF NOT EXISTS chunks (
 );
 CREATE INDEX IF NOT EXISTS chunks_path ON chunks (path);
 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5 (body, symbol, path, tokenize = 'porter unicode61');
+CREATE TABLE IF NOT EXISTS commits (
+    sha TEXT PRIMARY KEY,
+    author TEXT NOT NULL,
+    date TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    prs TEXT NOT NULL
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS commits_fts USING fts5 (subject, body, sha UNINDEXED, tokenize = 'porter unicode61');
+CREATE TABLE IF NOT EXISTS pull_requests (number INTEGER PRIMARY KEY, data TEXT NOT NULL);
 """
 _WORD = re.compile(r"[A-Za-z0-9_]+")
 _CAMEL = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
@@ -55,6 +67,12 @@ def identifier_terms(text: str) -> str:
         if len(parts) > 1:
             extra.extend(parts)
     return " ".join(extra)
+
+
+def _match_expression(query: str) -> str:
+    """An FTS5 OR-query of the query's words and identifier parts, each quoted so nothing is FTS syntax."""
+    terms = {t.lower() for t in _WORD.findall(query)} | set(identifier_terms(query).split())
+    return " OR ".join(f'"{t}"' for t in sorted(t for t in terms if len(t) > 1))
 
 
 class Store:
@@ -110,6 +128,8 @@ class Store:
             self._db.execute("DELETE FROM chunks_fts")
             self._db.execute("DELETE FROM chunks")
             self._db.execute("DELETE FROM files")
+            self._db.execute("DELETE FROM commits_fts")
+            self._db.execute("DELETE FROM commits")
             self._matrix = None
 
     def _delete_chunks(self, path: str) -> None:
@@ -133,15 +153,59 @@ class Store:
             f"SELECT id, path, start_line, end_line, kind, symbol, text FROM chunks WHERE id IN ({marks})", ids)
         return {row["id"]: StoredChunk(**dict(row)) for row in rows}
 
+    def find_symbol(self, symbol: str, path: str | None = None) -> list[StoredChunk]:
+        """Chunks whose symbol is ``symbol`` or ends with ``.symbol`` (so ``unsign`` finds ``Signer.unsign``)."""
+        query = ("SELECT id, path, start_line, end_line, kind, symbol, text FROM chunks"
+                 " WHERE (symbol = ? OR symbol LIKE ?)" + (" AND path = ?" if path else "") +
+                 " ORDER BY start_line")
+        params = [symbol, f"%.{symbol}"] + ([path] if path else [])
+        return [StoredChunk(**dict(row)) for row in self._db.execute(query, params)]
+
+    # ---- history --------------------------------------------------------------------------
+    def add_commits(self, commits: list[Commit]) -> int:
+        added = 0
+        with self._lock, self._db:
+            for commit in commits:
+                cur = self._db.execute(
+                    "INSERT OR IGNORE INTO commits (sha, author, date, subject, body, prs) VALUES (?, ?, ?, ?, ?, ?)",
+                    (commit.sha, commit.author, commit.date, commit.subject, commit.body, json.dumps(commit.prs)))
+                if cur.rowcount:
+                    added += 1
+                    self._db.execute("INSERT INTO commits_fts (subject, body, sha) VALUES (?, ?, ?)",
+                                     (f"{commit.subject} {identifier_terms(commit.subject)}", commit.body, commit.sha))
+        return added
+
+    def commit_count(self) -> int:
+        return self._db.execute("SELECT COUNT(*) FROM commits").fetchone()[0]
+
+    def search_commits(self, query: str, limit: int) -> list[Commit]:
+        match = _match_expression(query)
+        if not match:
+            return []
+        rows = self._db.execute(
+            "SELECT c.sha, c.author, c.date, c.subject, c.body, c.prs FROM commits_fts f"
+            " JOIN commits c ON c.sha = f.sha WHERE commits_fts MATCH ?"
+            " ORDER BY bm25(commits_fts, 3.0, 1.0) LIMIT ?", (match, limit))
+        return [Commit(sha=r["sha"], author=r["author"], date=r["date"], subject=r["subject"], body=r["body"],
+                       prs=tuple(json.loads(r["prs"]))) for r in rows]
+
+    def cached_pull_request(self, number: int) -> PullRequest | None:
+        row = self._db.execute("SELECT data FROM pull_requests WHERE number = ?", (number,)).fetchone()
+        return PullRequest(**json.loads(row["data"])) if row else None
+
+    def cache_pull_request(self, pr: PullRequest) -> None:
+        if pr.title is None:
+            return  # don't cache failed lookups; they may work next time
+        with self._lock, self._db:
+            self._db.execute("INSERT OR REPLACE INTO pull_requests (number, data) VALUES (?, ?)",
+                             (pr.number, json.dumps(pr.__dict__)))
+
     # ---- retrieval ------------------------------------------------------------------------
     def keyword_search(self, query: str, limit: int) -> list[int]:
         """Chunk ids ranked by BM25. Symbol and path matches count more than body matches."""
-        terms = {t.lower() for t in _WORD.findall(query)}
-        terms |= set(identifier_terms(query).split())
-        terms = {t for t in terms if len(t) > 1}
-        if not terms:
+        match = _match_expression(query)
+        if not match:
             return []
-        match = " OR ".join(f'"{t}"' for t in sorted(terms))
         rows = self._db.execute(
             "SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts, 1.0, 4.0, 2.0) LIMIT ?",
             (match, limit))

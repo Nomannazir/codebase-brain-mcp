@@ -64,18 +64,23 @@ def resolve(source: str, clone_dir: Path) -> Path:
         # Only plain https URLs: no ssh, no git's ext:: transports, no options smuggled into the URL.
         raise SourceError("Only https:// repository URLs are supported, e.g. https://github.com/owner/repo.")
     target = clone_dir / default_name(source)
+    # Blobless clones keep the full commit history (needed for explain_history) but fetch file
+    # contents only for the checkout and for the commits we actually inspect.
     if (target / ".git").is_dir():
-        _git(target, "fetch", "--depth", "1", "origin")
-        _git(target, "reset", "--hard", "FETCH_HEAD")
+        if run_git(target, "rev-parse", "--is-shallow-repository").strip() == "true":
+            run_git(target, "fetch", "--unshallow", "--filter=blob:none", "origin")
+        else:
+            run_git(target, "fetch", "--filter=blob:none", "origin")
+        run_git(target, "reset", "--hard", "FETCH_HEAD")
     else:
         clone_dir.mkdir(parents=True, exist_ok=True)
-        _git(clone_dir, "clone", "--depth", "1", "--", source, str(target))
+        run_git(clone_dir, "clone", "--filter=blob:none", "--", source, str(target))
     return target
 
 
 def head_commit(root: Path) -> str | None:
     try:
-        return _git(root, "rev-parse", "HEAD").strip() or None
+        return run_git(root, "rev-parse", "HEAD").strip() or None
     except SourceError:
         return None
 
@@ -111,7 +116,7 @@ def language_for(rel: str) -> str | None:
 
 def _candidate_paths(root: Path) -> list[str]:
     try:
-        out = _git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+        out = run_git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
         paths = [p for p in out.split("\0") if p]
         return [p for p in paths if not SKIP_DIRS.intersection(p.split("/")[:-1])]
     except SourceError:
@@ -125,7 +130,7 @@ def _candidate_paths(root: Path) -> list[str]:
     return paths
 
 
-def _git(cwd: Path, *args: str) -> str:
+def run_git(cwd: Path, *args: str) -> str:
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_ALLOW_PROTOCOL": "https:file"}
     try:
         done = subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, text=True,

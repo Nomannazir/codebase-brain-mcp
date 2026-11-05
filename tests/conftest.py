@@ -79,3 +79,28 @@ def brain(settings: Settings):
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+def _git(root: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True,
+                   env={"GIT_AUTHOR_NAME": "Ada", "GIT_AUTHOR_EMAIL": "ada@example.com",
+                        "GIT_COMMITTER_NAME": "Ada", "GIT_COMMITTER_EMAIL": "ada@example.com",
+                        "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null", "HOME": str(root)})
+
+
+@pytest.fixture
+def git_repo(tmp_path: Path) -> Path:
+    """A repo where `discount` is written, then changed twice for stated reasons."""
+    root = tmp_path / "shop"
+    root.mkdir()
+    _git(root, "init", "-q", "-b", "main")
+    (root / "pricing.py").write_text("def discount(price):\n    return price * 0.9\n\n\ndef tax(price):\n    return price * 0.2\n")
+    _git(root, "add", ".")
+    _git(root, "commit", "-q", "-m", "Add pricing helpers")
+    (root / "pricing.py").write_text("def discount(price):\n    return round(price * 0.9, 2)\n\n\ndef tax(price):\n    return price * 0.2\n")
+    _git(root, "commit", "-q", "-am", "Round discounts to cents (#12)", "-m", "Customers saw prices like 9.000001.")
+    (root / "pricing.py").write_text("def discount(price, rate=0.1):\n    return round(price * (1 - rate), 2)\n\n\ndef tax(price):\n    return price * 0.2\n")
+    _git(root, "commit", "-q", "-am", "Make discount rate configurable")
+    return root

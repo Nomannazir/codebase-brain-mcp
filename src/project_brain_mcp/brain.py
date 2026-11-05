@@ -10,16 +10,20 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import sources
+from . import history, sources
 from .chunking import chunk_file
 from .config import Settings
 from .embeddings import Embedder, make_embedder
+from .history import BlameShare, Commit, LineChange, PullRequest
 from .store import StoredChunk, Store
 
 RRF_K = 60
 """Reciprocal-rank-fusion constant; 60 is the value from the original paper and works well untuned."""
 CANDIDATES = 50
 EMBED_BATCH_FILES = 16
+HISTORY_LIMIT = 5_000
+"""Commits read per indexing run; enough for the history that matters, bounded for huge repos."""
+MAX_PULL_REQUESTS = 5
 _NAME = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 
 ProgressFn = Callable[[int, int, str], None]
@@ -39,6 +43,8 @@ class IndexReport:
     files_unchanged: int
     files_removed: int
     chunks_total: int
+    commits_added: int
+    commits_total: int
     seconds: float
     full_rebuild: bool
 
@@ -52,6 +58,19 @@ class Hit:
 
 
 @dataclass(frozen=True)
+class HistoryReport:
+    repo: str
+    path: str
+    start_line: int
+    end_line: int
+    symbol: str | None
+    blame: list[BlameShare]
+    changes: list[LineChange]
+    pull_requests: list[PullRequest]
+    github: str | None
+
+
+@dataclass(frozen=True)
 class RepoInfo:
     name: str
     source: str
@@ -60,6 +79,7 @@ class RepoInfo:
     indexed_at: str
     files: int
     chunks: int
+    commits: int = 0
     languages: dict[str, int] = field(default_factory=dict)
 
 
@@ -104,12 +124,18 @@ class Brain:
             notify(min(start + len(batch), len(changed)), len(changed), batch[-1].path)
 
         commit = sources.head_commit(root)
+        commits_added = 0
+        if history.is_git_repo(root):
+            notify(len(changed), len(changed), "reading git history")
+            since = None if full_rebuild else meta.get("history_head") or None
+            commits_added = store.add_commits(history.commits(root, since, HISTORY_LIMIT))
         store.set_meta(source=source, root=str(root), commit=commit or "", embed_model=self.embedder.model_id,
-                       indexed_at=datetime.now(UTC).isoformat(timespec="seconds"))
+                       history_head=commit or "", indexed_at=datetime.now(UTC).isoformat(timespec="seconds"))
         return IndexReport(
             repo=name, root=str(root), commit=commit, files_seen=len(files), files_indexed=len(changed),
             files_unchanged=len(files) - len(changed), files_removed=len(removed),
-            chunks_total=store.counts()["chunks"], seconds=round(time.monotonic() - started, 2),
+            chunks_total=store.counts()["chunks"], commits_added=commits_added, commits_total=store.commit_count(),
+            seconds=round(time.monotonic() - started, 2),
             full_rebuild=full_rebuild,
         )
 
@@ -145,6 +171,60 @@ class Brain:
                 break
         return hits
 
+    # ---- history --------------------------------------------------------------------------
+    def explain_history(self, repo: str | None, path: str | None = None, symbol: str | None = None,
+                        start: int | None = None, end: int | None = None, max_commits: int = 8) -> HistoryReport:
+        """How a function, a line range or a whole file came to be: blame shares, the commits that
+        changed it (with the relevant diff), and the pull requests those commits came from."""
+        name = self.resolve_repo(repo)
+        store = self._store(name)
+        root = Path(store.get_meta()["root"])
+        if symbol:
+            matches = store.find_symbol(symbol, path)
+            if not matches:
+                where = f" in {path}" if path else ""
+                raise BrainError(f"No function, class or section called {symbol!r}{where}. Try search first.")
+            path, start, end, symbol = _definition_span(matches)
+        if not path:
+            raise BrainError("Give a path (optionally with start and end lines) or a symbol.")
+        target = self._file_in(root, path)
+        if not history.is_git_repo(root):
+            raise BrainError(f"{name} isn't a git repository, so it has no history to explain.")
+        total = len(target.read_text(encoding="utf-8", errors="replace").splitlines())
+        start, end = max(1, start or 1), min(total, end or total)
+        if start > end:
+            raise BrainError(f"{path} has {total} lines.")
+        try:
+            changes = history.line_history(root, path, start, end, max(1, min(max_commits, 30)))
+            shares = history.blame(root, path, start, end)[:5]
+        except sources.SourceError as exc:
+            raise BrainError(f"git couldn't read the history of {path}: {exc}") from exc
+        slug = history.github_slug(root)
+        return HistoryReport(repo=name, path=path, start_line=start, end_line=end, symbol=symbol, blame=shares,
+                             changes=changes, pull_requests=self._pull_requests(store, slug, changes), github=slug)
+
+    def search_history(self, query: str, repo: str | None = None, k: int = 5) -> list[Commit]:
+        """Commits whose message matches the query (BM25)."""
+        if not query.strip():
+            raise BrainError("The query is empty.")
+        return self._store(self.resolve_repo(repo)).search_commits(query, k)
+
+    def _pull_requests(self, store: Store, slug: str | None, changes: list[LineChange]) -> list[PullRequest]:
+        numbers = list(dict.fromkeys(n for change in changes for n in change.commit.prs))[:MAX_PULL_REQUESTS]
+        if not slug:
+            return []
+        prs = []
+        for number in numbers:
+            pr = store.cached_pull_request(number)
+            if pr is None:
+                if self.settings.fetch_pull_requests:
+                    pr = history.fetch_pull_request(slug, number, self.settings.github_token)
+                    store.cache_pull_request(pr)
+                else:
+                    pr = PullRequest(number=number, url=f"https://github.com/{slug}/pull/{number}")
+            prs.append(pr)
+        return prs
+
     # ---- repositories ---------------------------------------------------------------------
     def repos(self) -> list[RepoInfo]:
         index_dir = self.settings.index_dir
@@ -159,7 +239,8 @@ class Brain:
         counts = store.counts()
         return RepoInfo(name=name, source=meta.get("source", ""), root=meta.get("root", ""),
                         commit=meta.get("commit") or None, indexed_at=meta["indexed_at"],
-                        files=counts["files"], chunks=counts["chunks"], languages=store.languages())
+                        files=counts["files"], chunks=counts["chunks"], commits=store.commit_count(),
+                        languages=store.languages())
 
     def resolve_repo(self, repo: str | None) -> str:
         """The repo to use: the one named, or the only one indexed."""
@@ -180,15 +261,21 @@ class Brain:
         info = self.repo_info(self.resolve_repo(repo))
         if info is None:
             raise BrainError("That repo isn't indexed.")
-        root = Path(info.root).resolve()
-        target = (root / path).resolve()
-        if not target.is_relative_to(root) or not target.is_file():
-            raise BrainError(f"{path!r} isn't a file in {info.name}.")
+        target = self._file_in(Path(info.root), path)
         lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
         start, end = max(1, start), min(len(lines), end)
         if start > end:
             raise BrainError(f"{path} has {len(lines)} lines.")
         return "\n".join(f"{n:>5}  {lines[n - 1]}" for n in range(start, end + 1))
+
+    @staticmethod
+    def _file_in(root: Path, path: str) -> Path:
+        """``path`` inside ``root``, refusing anything that escapes it."""
+        root = root.resolve()
+        target = (root / path).resolve()
+        if not target.is_relative_to(root) or not target.is_file():
+            raise BrainError(f"{path!r} isn't a file in this repository.")
+        return target
 
     def close(self) -> None:
         for store in self._stores.values():
@@ -205,6 +292,22 @@ class Brain:
         if not _NAME.match(name) or name.startswith("."):
             raise BrainError("Repo names may use letters, digits, '.', '_' and '-' only.")
         return name
+
+
+def _definition_span(matches: list[StoredChunk]) -> tuple[str, int, int, str | None]:
+    """The real definition among same-named chunks: windows of one long function are merged back
+    together, and the biggest span wins, so ``@overload`` stubs lose to the implementation."""
+    first = matches[0]
+    same = sorted((c for c in matches if c.path == first.path and c.symbol == first.symbol),
+                  key=lambda c: c.start_line)
+    spans: list[list[int]] = []
+    for chunk in same:
+        if spans and chunk.start_line <= spans[-1][1] + 1:
+            spans[-1][1] = max(spans[-1][1], chunk.end_line)
+        else:
+            spans.append([chunk.start_line, chunk.end_line])
+    start, end = max(spans, key=lambda span: span[1] - span[0])
+    return first.path, start, end, first.symbol
 
 
 def _sha(text: str) -> str:
