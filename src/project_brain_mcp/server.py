@@ -10,6 +10,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
+from .analysis import DriftReport, ImpactReport
 from .brain import Brain, BrainError, Hit, HistoryReport
 from .history import Commit
 from .config import load_settings
@@ -20,7 +21,9 @@ Project Brain indexes code repositories and answers questions about them with ci
 Start with index_repo (a local path or an https git URL). Then use ask_codebase for questions,
 search for raw hybrid search, and read_lines to open the exact lines a citation points at.
 For "why is it like this?" questions, use explain_history on a symbol or line range, and
-search_history to find commits by topic. Cite code as path:start-end and commits by short sha."""
+search_history to find commits by topic. Before changing a function, run impact_of_change to see
+what depends on it. find_doc_drift lists documentation that no longer matches the code.
+Cite code as path:start-end and commits by short sha."""
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 MAX_RESULTS = 25
 SNIPPET_CHARS = 1_800
@@ -108,6 +111,43 @@ class HistoryResult(BaseModel):
     pull_requests: list[PullRequestInfo]
 
 
+class DependentInfo(BaseModel):
+    citation: str
+    symbol: str | None
+    kind: str
+    via: str = Field(description="The name through which it depends on the level above.")
+    level: int = Field(description="1 = uses the target directly, 2 = uses something that does.")
+    is_test: bool
+
+
+class ImpactResult(BaseModel):
+    target: str = Field(description="path:start-end of the definition analysed.")
+    symbol: str
+    summary: str
+    direct: list[DependentInfo]
+    indirect: list[DependentInfo]
+    tests: list[str] = Field(description="Citations of tests that exercise the target, directly or not.")
+    same_name_definitions: list[str]
+    notes: list[str]
+
+
+class FindingInfo(BaseModel):
+    severity: str = Field(description="high (almost certainly wrong), medium (probably wrong), low (worth a look).")
+    kind: str
+    doc: str = Field(description="path:start-end of the doc section.")
+    claim: str
+    detail: str
+    suggestion: str | None
+
+
+class DriftResult(BaseModel):
+    repo: str
+    summary: str
+    sections_checked: int
+    references_checked: int
+    findings: list[FindingInfo]
+
+
 class RepoSummary(BaseModel):
     name: str
     source: str
@@ -173,6 +213,23 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         return _history(report)
 
     @server.tool(annotations=READ_ONLY)
+    async def impact_of_change(symbol: str, repo: str | None = None, path: str | None = None,
+                               depth: int = 2) -> ImpactResult:
+        """What breaks if `symbol` changes: code that uses it directly, code that uses that code
+        (up to `depth`, max 3), and the tests involved. Python is analysed structurally."""
+        report = await _call(lambda: brain.impact_of_change(repo, symbol, path, depth))
+        return _impact(report)
+
+    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
+    async def find_doc_drift(repo: str | None = None, path_prefix: str | None = None, check_history: bool = True,
+                             limit: int = 50) -> DriftResult:
+        """Documentation that no longer matches the code: files, functions, settings and flags that don't
+        exist; examples passing parameters a function doesn't take; imports that would fail; and docs last
+        edited long before the code they describe changed. Each finding cites the doc section."""
+        report = await _call(lambda: brain.find_doc_drift(repo, path_prefix, check_history, max(1, min(limit, 200))))
+        return _drift(brain.resolve_repo(repo), report)
+
+    @server.tool(annotations=READ_ONLY)
     async def search_history(query: str, repo: str | None = None, k: int = 5) -> list[CommitInfo]:
         """Find commits by what their messages say, e.g. "fix timezone" or "drop python 3.8"."""
         commits = await _call(lambda: brain.search_history(query, repo, max(1, min(k, MAX_RESULTS))))
@@ -228,6 +285,32 @@ async def _call(fn):
 def _commit(commit: Commit) -> CommitInfo:
     return CommitInfo(sha=commit.sha[:10], author=commit.author, date=commit.date, subject=commit.subject,
                       body=commit.body, pull_requests=list(commit.prs))
+
+
+def _impact(report: ImpactReport) -> ImpactResult:
+    def info(d) -> DependentInfo:
+        return DependentInfo(citation=d.chunk.citation, symbol=d.chunk.symbol, kind=d.chunk.kind, via=d.via,
+                             level=d.level, is_test=d.is_test)
+
+    direct = [info(d) for d in report.dependents if d.level == 1]
+    indirect = [info(d) for d in report.dependents if d.level > 1]
+    tests = [d.chunk.citation for d in report.dependents if d.is_test]
+    files = len({d.chunk.path for d in report.dependents})
+    summary = (f"{report.symbol} is used directly in {len(direct)} place(s) and indirectly in {len(indirect)}, "
+               f"across {files} file(s); {len(tests)} test chunk(s) exercise it.")
+    return ImpactResult(target=f"{report.path}:{report.start_line}-{report.end_line}", symbol=report.symbol,
+                        summary=summary, direct=direct, indirect=indirect, tests=tests,
+                        same_name_definitions=report.same_name_definitions, notes=report.notes)
+
+
+def _drift(repo: str, report: DriftReport) -> DriftResult:
+    counts = {level: sum(f.severity == level for f in report.findings) for level in ("high", "medium", "low")}
+    summary = (f"{len(report.findings)} finding(s) in {report.sections_checked} doc section(s): "
+               f"{counts['high']} high, {counts['medium']} medium, {counts['low']} low."
+               if report.findings else f"No drift found in {report.sections_checked} doc section(s).")
+    return DriftResult(repo=repo, summary=summary, sections_checked=report.sections_checked,
+                       references_checked=report.references_checked,
+                       findings=[FindingInfo(**f.__dict__) for f in report.findings])
 
 
 def _history(report: HistoryReport) -> HistoryResult:

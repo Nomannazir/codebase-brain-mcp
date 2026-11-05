@@ -8,13 +8,15 @@ again but keep their symbol, so a citation always says which function it came fr
 from __future__ import annotations
 
 import ast
+import builtins
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 WINDOW_LINES = 60
 WINDOW_OVERLAP = 10
 MAX_CHUNK_LINES = 120
 _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
+_IGNORED_NAMES = set(dir(builtins)) | {"self", "cls", "super", "typing", "t", "_"}
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,12 @@ class Chunk:
     """function, class, method, module, section, or code."""
     symbol: str | None
     text: str
+    refs: tuple[str, ...] = ()
+    """Names this chunk uses: calls, attributes and imports (Python only). Feeds impact_of_change."""
+    params: tuple[str, ...] | None = None
+    """Parameter names when the chunk is a function or method; None otherwise. Feeds find_doc_drift."""
+    accepts_any_keyword: bool = False
+    """True when the function takes ``**kwargs``, so any keyword argument is valid."""
 
     @property
     def citation(self) -> str:
@@ -40,10 +48,12 @@ def chunk_file(path: str, language: str, text: str) -> list[Chunk]:
         return []
     if language == "python":
         try:
-            chunks = _python_chunks(path, lines, ast.parse(text))
+            tree = ast.parse(text)
         except (SyntaxError, ValueError):
-            chunks = _windows(path, lines, 1, len(lines), "code", None)
-    elif language == "markdown":
+            return _windows(path, lines, 1, len(lines), "code", None)
+        chunks = [piece for chunk in _python_chunks(path, lines, tree) for piece in _split_long(chunk, lines)]
+        return _with_python_facts(chunks, tree)
+    if language == "markdown":
         chunks = _markdown_chunks(path, lines)
     else:
         chunks = _windows(path, lines, 1, len(lines), "code", None)
@@ -74,6 +84,36 @@ def _python_chunks(path: str, lines: list[str], tree: ast.Module) -> list[Chunk]
             chunks.append(_make(path, lines, gap_start, gap_end, "module", None))
         cursor = max(cursor, end + 1)
     return sorted(chunks, key=lambda c: c.start_line)
+
+
+def _with_python_facts(chunks: list[Chunk], tree: ast.Module) -> list[Chunk]:
+    """Attach the names each chunk uses, and the parameters of each function chunk."""
+    uses: list[tuple[int, str]] = []
+    signatures: dict[int, tuple[tuple[str, ...], bool]] = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+            uses.append((node.lineno, node.id))
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Load):
+            uses.append((node.lineno, node.attr))
+        elif isinstance(node, ast.ImportFrom):
+            uses.extend((node.lineno, alias.name) for alias in node.names)
+            if node.module:
+                uses.extend((node.lineno, part) for part in node.module.split("."))
+        elif isinstance(node, ast.Import):
+            uses.extend((node.lineno, part) for alias in node.names for part in alias.name.split("."))
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            args = node.args
+            names = [a.arg for a in (*args.posonlyargs, *args.args, *args.kwonlyargs)]
+            signatures[_span(node)[0]] = (tuple(n for n in names if n not in ("self", "cls")), args.kwarg is not None)
+    result = []
+    for chunk in chunks:
+        own = chunk.symbol.rsplit(".", 1)[-1] if chunk.symbol else None
+        refs = sorted({name for line, name in uses if chunk.start_line <= line <= chunk.end_line
+                       and name not in _IGNORED_NAMES and name != own and len(name) > 2})
+        signature = signatures.get(chunk.start_line) if chunk.kind in ("function", "method") else None
+        result.append(replace(chunk, refs=tuple(refs), params=signature[0] if signature else None,
+                              accepts_any_keyword=bool(signature and signature[1])))
+    return result
 
 
 def _class_chunks(path: str, lines: list[str], node: ast.ClassDef, start: int, end: int) -> list[Chunk]:

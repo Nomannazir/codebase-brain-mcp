@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from . import history, sources
+from . import analysis, history, sources
+from .analysis import DriftReport, ImpactReport, definition_span
 from .chunking import chunk_file
 from .config import Settings
 from .embeddings import Embedder, make_embedder
@@ -99,7 +100,8 @@ class Brain:
         store = self._store(name)
 
         meta = store.get_meta()
-        full_rebuild = meta.get("embed_model") != self.embedder.model_id
+        full_rebuild = (meta.get("embed_model") != self.embedder.model_id
+                        or meta.get("schema_version") != store.schema_version)
         if full_rebuild:
             store.clear()
         known = store.file_hashes()
@@ -130,7 +132,7 @@ class Brain:
             since = None if full_rebuild else meta.get("history_head") or None
             commits_added = store.add_commits(history.commits(root, since, HISTORY_LIMIT))
         store.set_meta(source=source, root=str(root), commit=commit or "", embed_model=self.embedder.model_id,
-                       history_head=commit or "", indexed_at=datetime.now(UTC).isoformat(timespec="seconds"))
+                       history_head=commit or "", schema_version=store.schema_version, indexed_at=datetime.now(UTC).isoformat(timespec="seconds"))
         return IndexReport(
             repo=name, root=str(root), commit=commit, files_seen=len(files), files_indexed=len(changed),
             files_unchanged=len(files) - len(changed), files_removed=len(removed),
@@ -184,7 +186,7 @@ class Brain:
             if not matches:
                 where = f" in {path}" if path else ""
                 raise BrainError(f"No function, class or section called {symbol!r}{where}. Try search first.")
-            path, start, end, symbol = _definition_span(matches)
+            path, start, end, symbol = definition_span(matches)
         if not path:
             raise BrainError("Give a path (optionally with start and end lines) or a symbol.")
         target = self._file_in(root, path)
@@ -224,6 +226,24 @@ class Brain:
                     pr = PullRequest(number=number, url=f"https://github.com/{slug}/pull/{number}")
             prs.append(pr)
         return prs
+
+    # ---- structure ------------------------------------------------------------------------
+    def impact_of_change(self, repo: str | None, symbol: str, path: str | None = None, depth: int = 2) -> ImpactReport:
+        """What uses ``symbol``, directly and transitively, including the tests that exercise it."""
+        store = self._store(self.resolve_repo(repo))
+        matches = store.find_symbol(symbol, path)
+        if not matches:
+            where = f" in {path}" if path else ""
+            raise BrainError(f"No function, class or method called {symbol!r}{where}. Try search first.")
+        target_path, start, end, _ = definition_span(matches)
+        target = next(c for c in matches if c.path == target_path)
+        return analysis.impact_of_change(store, target, (start, end), depth)
+
+    def find_doc_drift(self, repo: str | None, path_prefix: str | None = None, check_history: bool = True,
+                       limit: int = 50) -> DriftReport:
+        """Documentation that no longer matches the code."""
+        store = self._store(self.resolve_repo(repo))
+        return analysis.find_doc_drift(store, Path(store.get_meta()["root"]), path_prefix, check_history, limit)
 
     # ---- repositories ---------------------------------------------------------------------
     def repos(self) -> list[RepoInfo]:
@@ -294,20 +314,6 @@ class Brain:
         return name
 
 
-def _definition_span(matches: list[StoredChunk]) -> tuple[str, int, int, str | None]:
-    """The real definition among same-named chunks: windows of one long function are merged back
-    together, and the biggest span wins, so ``@overload`` stubs lose to the implementation."""
-    first = matches[0]
-    same = sorted((c for c in matches if c.path == first.path and c.symbol == first.symbol),
-                  key=lambda c: c.start_line)
-    spans: list[list[int]] = []
-    for chunk in same:
-        if spans and chunk.start_line <= spans[-1][1] + 1:
-            spans[-1][1] = max(spans[-1][1], chunk.end_line)
-        else:
-            spans.append([chunk.start_line, chunk.end_line])
-    start, end = max(spans, key=lambda span: span[1] - span[0])
-    return first.path, start, end, first.symbol
 
 
 def _sha(text: str) -> str:

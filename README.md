@@ -19,6 +19,12 @@ code and get answers backed by exact `path:start-end` citations.
 - **History-aware.** `explain_history` follows a function's lines back through git (`git log -L`), shows who wrote
   the current lines, and links the pull requests behind each change. So agents can answer *"why is it built this
   way?"*, not just *"what does it do?"*.
+- **Impact analysis.** `impact_of_change` lists everything that uses a function, directly and transitively, plus the
+  tests that exercise it, before an agent changes anything.
+- **Doc-drift detection.** `find_doc_drift` checks Markdown and reStructuredText docs against the code. It finds
+  files, functions, settings and flags that don't exist; examples passing parameters a function doesn't take; imports
+  that would fail; and sections last edited long before the code they describe changed. Each finding cites the doc
+  section and suggests a fix ("Was it renamed to `checkout_total`?").
 - **Agent-friendly output.** Structured tool results, read-only tool annotations, progress notifications while
   indexing, and clear error messages the model can act on.
 
@@ -31,6 +37,8 @@ code and get answers backed by exact `path:start-end` citations.
 | `search(query, repo?, k?, path_prefix?, kinds?)` | Raw hybrid search, filterable by path and chunk kind. |
 | `explain_history(symbol? \| path, start_line?, end_line?, repo?)` | Every commit that changed a function or line range, newest first, with the relevant diff, current authorship, and PR titles and descriptions (GitHub). |
 | `search_history(query, repo?, k?)` | Find commits by what their messages say. |
+| `impact_of_change(symbol, path?, depth?, repo?)` | Direct and indirect users of a function or class, and the tests involved. |
+| `find_doc_drift(path_prefix?, check_history?, repo?)` | Documentation that no longer matches the code, by severity (high, medium, low). |
 | `read_lines(path, start, end, repo?)` | Open the exact lines behind a citation. Refuses paths outside the repo. |
 | `list_repos()` | What's indexed, at which commit, and in which languages. |
 
@@ -79,6 +87,14 @@ claude mcp add project-brain -- uv run --directory /path/to/project-brain-mcp pr
 | `GITHUB_TOKEN` | unset | Optional. Raises GitHub's API rate limit for PR lookups |
 | `PROJECT_BRAIN_FETCH_PRS` | `1` | Set to `0` to never call the GitHub API |
 
+### Doc drift, tested honestly
+
+On a well-maintained project (itsdangerous), `find_doc_drift` reports no false alarms. It only reports three
+"worth a look" sections whose docs date from 2020 while the code they describe changed in 2024–2025. On docs with
+planted mistakes, it catches every one: a moved file, a renamed function (with the right suggestion), an unknown
+setting and flag, a keyword argument the function doesn't take, and an import that would fail. Changelogs are skipped,
+because they're supposed to mention removed things.
+
 ## How it works
 
 ```
@@ -100,13 +116,13 @@ query  ─► BM25 top 50 ┐
 ## Development
 
 ```bash
-uv run pytest     # 26 tests, offline (hash embedder, temporary git repos, in-process MCP client)
+uv run pytest     # 38 tests, offline (hash embedder, temporary git repos, in-process MCP client)
 ```
 
 ## Roadmap
 
 - [x] Git history and PR discussions: `explain_history`, `search_history`
-- [ ] Knowledge graph of symbols, files and commits: `impact_of_change`
-- [ ] `find_doc_drift`: documentation claims that no longer match the code
+- [x] Symbol references and transitive dependents: `impact_of_change`
+- [x] `find_doc_drift`: Markdown and reStructuredText, signatures, imports, settings, flags, staleness
 - [ ] tree-sitter chunking for more languages
 - [ ] Streamable HTTP deployment with auth, retrieval evals, and OpenTelemetry tracing
