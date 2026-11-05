@@ -1,0 +1,29 @@
+[project]
+name = "project-brain-mcp"
+version = "0.1.0"
+description = "An MCP server that gives AI agents a cited, searchable memory of a codebase."
+readme = "README.md"
+authors = [
+    { name = "Noman Nazir", email = "nomannazir69@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastembed>=0.9.1",
+    "mcp>=2.3.0",
+    "numpy>=2.5.4",
+]
+
+[project.scripts]
+project-brain = "project_brain_mcp.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.11.16,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
