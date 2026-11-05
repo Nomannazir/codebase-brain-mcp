@@ -1,5 +1,7 @@
 # Project Brain MCP
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 An [MCP](https://modelcontextprotocol.io) server that gives AI agents a **cited, searchable memory of a codebase**.
 Point it at a local folder or a public git URL. Claude, Cursor or any MCP client can then ask questions about the
 code and get answers backed by exact `path:start-end` citations.
