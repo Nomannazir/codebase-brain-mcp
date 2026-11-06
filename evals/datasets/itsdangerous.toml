@@ -1,0 +1,233 @@
+# Retrieval benchmark on pallets/itsdangerous, pinned to one commit so results are reproducible.
+#
+# Each query lists the chunks a good answer must come from. A target is a file path, optionally
+# narrowed to a symbol (function, class or method). A result counts as relevant if it is in that
+# file and, when a symbol is given, is that symbol or one of its methods.
+#
+# The queries were written by reading the code and docs, before any results were measured, and
+# were not edited afterwards to improve scores.
+#
+# Categories:
+#   identifier  the query names the code (what a developer types when they know the name)
+#   behaviour   the query describes what code does, in different words from the code
+#   docs        the answer is in the documentation, not the code
+
+name = "itsdangerous"
+repo = "https://github.com/pallets/itsdangerous"
+commit = "672971d66a2ef9f85151e53283113f33d642dabd"
+
+# ---- identifier --------------------------------------------------------------------------------
+
+[[query]]
+id = "id-want-bytes"
+category = "identifier"
+text = "want_bytes"
+targets = [{ path = "src/itsdangerous/encoding.py", symbol = "want_bytes" }]
+
+[[query]]
+id = "id-base64-decode"
+category = "identifier"
+text = "base64_decode padding"
+targets = [{ path = "src/itsdangerous/encoding.py", symbol = "base64_decode" }]
+
+[[query]]
+id = "id-iter-unsigners"
+category = "identifier"
+text = "iter_unsigners"
+targets = [{ path = "src/itsdangerous/serializer.py", symbol = "Serializer.iter_unsigners" }]
+
+[[query]]
+id = "id-derive-key"
+category = "identifier"
+text = "derive_key django-concat"
+targets = [{ path = "src/itsdangerous/signer.py", symbol = "Signer.derive_key" }]
+
+[[query]]
+id = "id-signature-expired"
+category = "identifier"
+text = "SignatureExpired"
+targets = [{ path = "src/itsdangerous/exc.py", symbol = "SignatureExpired" }]
+
+[[query]]
+id = "id-url-safe-timed"
+category = "identifier"
+text = "URLSafeTimedSerializer"
+targets = [{ path = "src/itsdangerous/url_safe.py", symbol = "URLSafeTimedSerializer" }]
+
+[[query]]
+id = "id-loads-unsafe"
+category = "identifier"
+text = "loads_unsafe"
+targets = [
+    { path = "src/itsdangerous/serializer.py", symbol = "Serializer.loads_unsafe" },
+    { path = "src/itsdangerous/serializer.py", symbol = "Serializer._loads_unsafe_impl" },
+]
+
+[[query]]
+id = "id-hmac-algorithm"
+category = "identifier"
+text = "HMACAlgorithm get_signature"
+targets = [{ path = "src/itsdangerous/signer.py", symbol = "HMACAlgorithm" }]
+
+[[query]]
+id = "id-make-keys-list"
+category = "identifier"
+text = "_make_keys_list"
+targets = [{ path = "src/itsdangerous/signer.py", symbol = "_make_keys_list" }]
+
+[[query]]
+id = "id-bad-header"
+category = "identifier"
+text = "BadHeader header"
+targets = [{ path = "src/itsdangerous/exc.py", symbol = "BadHeader" }]
+
+[[query]]
+id = "id-int-to-bytes"
+category = "identifier"
+text = "int_to_bytes"
+targets = [{ path = "src/itsdangerous/encoding.py", symbol = "int_to_bytes" }]
+
+# ---- behaviour ---------------------------------------------------------------------------------
+
+[[query]]
+id = "bh-rotation-verify"
+category = "behaviour"
+text = "which secret keys are tried when checking a token after keys were rotated"
+targets = [
+    { path = "src/itsdangerous/signer.py", symbol = "Signer.verify_signature" },
+    { path = "src/itsdangerous/signer.py", symbol = "Signer.derive_key" },
+]
+
+[[query]]
+id = "bh-future-timestamp"
+category = "behaviour"
+text = "reject a token that claims it was created in the future"
+targets = [{ path = "src/itsdangerous/timed.py", symbol = "TimestampSigner.unsign" }]
+
+[[query]]
+id = "bh-compress-for-url"
+category = "behaviour"
+text = "shrink the data with compression before putting it in a link"
+targets = [{ path = "src/itsdangerous/url_safe.py", symbol = "URLSafeSerializerMixin" }]
+
+[[query]]
+id = "bh-fallback-signers"
+category = "behaviour"
+text = "fall back to older signing settings when the current ones can't verify"
+targets = [
+    { path = "src/itsdangerous/serializer.py", symbol = "Serializer.iter_unsigners" },
+    { path = "src/itsdangerous/serializer.py", symbol = "Serializer.loads" },
+]
+
+[[query]]
+id = "bh-aware-datetime"
+category = "behaviour"
+text = "turn the stored signing time into a timezone aware date"
+targets = [{ path = "src/itsdangerous/timed.py", symbol = "TimestampSigner.timestamp_to_datetime" }]
+
+[[query]]
+id = "bh-current-time"
+category = "behaviour"
+text = "where does the current clock time for a new signature come from"
+targets = [{ path = "src/itsdangerous/timed.py", symbol = "TimestampSigner.get_timestamp" }]
+
+[[query]]
+id = "bh-fips"
+category = "behaviour"
+text = "avoid failing at import on systems where SHA-1 is disabled for compliance"
+targets = [{ path = "src/itsdangerous/signer.py", symbol = "_lazy_sha1" }]
+
+[[query]]
+id = "bh-constant-time"
+category = "behaviour"
+text = "compare signatures safely against timing attacks"
+targets = [
+    { path = "src/itsdangerous/signer.py", symbol = "SigningAlgorithm" },
+    { path = "src/itsdangerous/signer.py", symbol = "Signer.verify_signature" },
+]
+
+[[query]]
+id = "bh-no-signature"
+category = "behaviour"
+text = "an algorithm that produces an empty signature"
+targets = [{ path = "src/itsdangerous/signer.py", symbol = "NoneAlgorithm" }]
+
+[[query]]
+id = "bh-debug-decode"
+category = "behaviour"
+text = "read the contents of a token even when its signature is invalid"
+targets = [
+    { path = "src/itsdangerous/serializer.py", symbol = "Serializer.loads_unsafe" },
+    { path = "src/itsdangerous/serializer.py", symbol = "Serializer._loads_unsafe_impl" },
+]
+
+[[query]]
+id = "bh-undecodable-payload"
+category = "behaviour"
+text = "error when the signed data can't be turned back into an object"
+targets = [{ path = "src/itsdangerous/exc.py", symbol = "BadPayload" }]
+
+[[query]]
+id = "bh-compact-json"
+category = "behaviour"
+text = "json output without extra whitespace to keep tokens small"
+targets = [{ path = "src/itsdangerous/_json.py", symbol = "_CompactJSON" }]
+
+[[query]]
+id = "bh-text-or-binary"
+category = "behaviour"
+text = "detect whether a serializer outputs text or bytes"
+targets = [{ path = "src/itsdangerous/serializer.py", symbol = "is_text_serializer" }]
+
+[[query]]
+id = "bh-validate-bool"
+category = "behaviour"
+text = "check a signed value and get true or false instead of an exception"
+targets = [
+    { path = "src/itsdangerous/signer.py", symbol = "Signer.validate" },
+    { path = "src/itsdangerous/timed.py", symbol = "TimestampSigner.validate" },
+]
+
+# ---- docs --------------------------------------------------------------------------------------
+
+[[query]]
+id = "doc-salt-contexts"
+category = "docs"
+text = "why should activation links and upgrade links use different salts"
+targets = [{ path = "docs/concepts.rst" }]
+
+[[query]]
+id = "doc-store-secret"
+category = "docs"
+text = "where should I keep the secret key in production"
+targets = [{ path = "docs/concepts.rst" }]
+
+[[query]]
+id = "doc-signer-vs-serializer"
+category = "docs"
+text = "should I use a signer or a serializer"
+targets = [{ path = "docs/concepts.rst" }]
+
+[[query]]
+id = "doc-generate-key"
+category = "docs"
+text = "how do I generate a good random key"
+targets = [{ path = "docs/concepts.rst" }]
+
+[[query]]
+id = "doc-version-2"
+category = "docs"
+text = "what changed in version 2.0"
+targets = [{ path = "CHANGES.rst" }]
+
+[[query]]
+id = "doc-expiring"
+category = "docs"
+text = "how to make signed values expire after some time"
+targets = [{ path = "docs/timed.rst" }, { path = "src/itsdangerous/timed.py", symbol = "TimestampSigner" }]
+
+[[query]]
+id = "doc-url-safe"
+category = "docs"
+text = "how to put signed data in a URL"
+targets = [{ path = "docs/url_safe.rst" }, { path = "src/itsdangerous/url_safe.py" }]

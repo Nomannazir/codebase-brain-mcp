@@ -1,0 +1,1207 @@
+{
+  "dataset": "itsdangerous",
+  "commit": "672971d66a2ef9f85151e53283113f33d642dabd",
+  "embedder": "fastembed:BAAI/bge-small-en-v1.5",
+  "depth": 10,
+  "summaries": {
+    "hybrid": {
+      "hit_at": {
+        "1": 0.5625,
+        "3": 0.875,
+        "5": 0.875,
+        "10": 0.90625
+      },
+      "mrr": 0.6971726190476191,
+      "mrr_ci": [
+        0.5624813988095239,
+        0.8221726190476191
+      ],
+      "hit5_ci": [
+        0.75,
+        0.96875
+      ],
+      "ndcg": 0.7345722554833364,
+      "recall": 0.875,
+      "latency_p50_ms": 4.686603497248143,
+      "latency_p95_ms": 6.16637272760272,
+      "by_category": {
+        "behaviour": {
+          "queries": 14,
+          "hit@1": 0.5,
+          "hit@5": 0.7142857142857143,
+          "mrr": 0.6054421768707483
+        },
+        "docs": {
+          "queries": 7,
+          "hit@1": 0.42857142857142855,
+          "hit@5": 1.0,
+          "mrr": 0.6428571428571429
+        },
+        "identifier": {
+          "queries": 11,
+          "hit@1": 0.7272727272727273,
+          "hit@5": 1.0,
+          "mrr": 0.8484848484848485
+        }
+      }
+    },
+    "keyword": {
+      "hit_at": {
+        "1": 0.5625,
+        "3": 0.75,
+        "5": 0.78125,
+        "10": 0.84375
+      },
+      "mrr": 0.6667906746031746,
+      "mrr_ci": [
+        0.5210596478174603,
+        0.7977647569444446
+      ],
+      "hit5_ci": [
+        0.625,
+        0.90625
+      ],
+      "ndcg": 0.6990472216889327,
+      "recall": 0.8125,
+      "latency_p50_ms": 0.4866249510087073,
+      "latency_p95_ms": 0.6466249993536621,
+      "by_category": {
+        "behaviour": {
+          "queries": 14,
+          "hit@1": 0.5,
+          "hit@5": 0.6428571428571429,
+          "mrr": 0.5535714285714286
+        },
+        "docs": {
+          "queries": 7,
+          "hit@1": 0.42857142857142855,
+          "hit@5": 0.7142857142857143,
+          "mrr": 0.6077097505668935
+        },
+        "identifier": {
+          "queries": 11,
+          "hit@1": 0.7272727272727273,
+          "hit@5": 1.0,
+          "mrr": 0.8484848484848485
+        }
+      }
+    },
+    "vector": {
+      "hit_at": {
+        "1": 0.5625,
+        "3": 0.71875,
+        "5": 0.75,
+        "10": 0.9375
+      },
+      "mrr": 0.6578000992063492,
+      "mrr_ci": [
+        0.5112475198412698,
+        0.7977570064484127
+      ],
+      "hit5_ci": [
+        0.59375,
+        0.90625
+      ],
+      "ndcg": 0.7011353012177518,
+      "recall": 0.875,
+      "latency_p50_ms": 3.671624988783151,
+      "latency_p95_ms": 4.910652409307659,
+      "by_category": {
+        "behaviour": {
+          "queries": 14,
+          "hit@1": 0.42857142857142855,
+          "hit@5": 0.5714285714285714,
+          "mrr": 0.5082199546485261
+        },
+        "docs": {
+          "queries": 7,
+          "hit@1": 0.42857142857142855,
+          "hit@5": 0.7142857142857143,
+          "mrr": 0.5620748299319728
+        },
+        "identifier": {
+          "queries": 11,
+          "hit@1": 0.8181818181818182,
+          "hit@5": 1.0,
+          "mrr": 0.9090909090909091
+        }
+      }
+    }
+  },
+  "paired": {
+    "hybrid vs keyword": {
+      "wins": 8,
+      "ties": 20,
+      "losses": 4
+    },
+    "hybrid vs vector": {
+      "wins": 8,
+      "ties": 17,
+      "losses": 7
+    }
+  },
+  "queries": {
+    "hybrid": [
+      {
+        "id": "id-want-bytes",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "tests/test_itsdangerous/test_encoding.py:11-14",
+          "src/itsdangerous/encoding.py:11-17",
+          "src/itsdangerous/signer.py:67-73"
+        ]
+      },
+      {
+        "id": "id-base64-decode",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/encoding.py:28-38",
+          "tests/test_itsdangerous/test_encoding.py:25-27",
+          "docs/encoding.rst:1-8"
+        ]
+      },
+      {
+        "id": "id-iter-unsigners",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "tests/test_itsdangerous/test_serializer.py:166-183",
+          "src/itsdangerous/serializer.py:287-307",
+          "src/itsdangerous/serializer.py:328-343"
+        ]
+      },
+      {
+        "id": "id-derive-key",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:182-213",
+          "src/itsdangerous/signer.py:76-128",
+          "src/itsdangerous/signer.py:215-220"
+        ]
+      },
+      {
+        "id": "id-signature-expired",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:60-63",
+          "src/itsdangerous/timed.py:22-28",
+          "docs/timed.rst:1-28"
+        ]
+      },
+      {
+        "id": "id-url-safe-timed",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/url_safe.py:79-83",
+          "tests/test_itsdangerous/test_url_safe.py:21-24",
+          "src/itsdangerous/url_safe.py:72-76"
+        ]
+      },
+      {
+        "id": "id-loads-unsafe",
+        "category": "identifier",
+        "rank": 3,
+        "ndcg": 0.5706,
+        "top": [
+          "src/itsdangerous/serializer.py:397-404",
+          "tests/test_itsdangerous/test_serializer.py:90-110",
+          "src/itsdangerous/serializer.py:367-395"
+        ]
+      },
+      {
+        "id": "id-hmac-algorithm",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:48-64",
+          "src/itsdangerous/signer.py:15-28",
+          "src/itsdangerous/signer.py:31-37"
+        ]
+      },
+      {
+        "id": "id-make-keys-list",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:67-73",
+          "src/itsdangerous/serializer.py:190-234",
+          "src/itsdangerous/signer.py:129-173"
+        ]
+      },
+      {
+        "id": "id-bad-header",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:66-89",
+          "docs/exceptions.rst:1-22",
+          "CHANGES.rst:151-210"
+        ]
+      },
+      {
+        "id": "id-int-to-bytes",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/encoding.py:49-50",
+          "tests/test_itsdangerous/test_encoding.py:30-37",
+          "src/itsdangerous/encoding.py:53-54"
+        ]
+      },
+      {
+        "id": "bh-rotation-verify",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "docs/concepts.rst:101-154",
+          "docs/concepts.rst:51-110",
+          "src/itsdangerous/signer.py:76-128"
+        ]
+      },
+      {
+        "id": "bh-future-timestamp",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "src/itsdangerous/exc.py:36-57",
+          "README.md:3-15",
+          "src/itsdangerous/exc.py:22-33"
+        ]
+      },
+      {
+        "id": "bh-compress-for-url",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/url_safe.py:15-69",
+          "CHANGES.rst:101-160",
+          ".github/pull_request_template.md:1-25"
+        ]
+      },
+      {
+        "id": "bh-fallback-signers",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "docs/timed.rst:1-28",
+          "CHANGES.rst:101-160",
+          "src/itsdangerous/signer.py:244-256"
+        ]
+      },
+      {
+        "id": "bh-aware-datetime",
+        "category": "behaviour",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "src/itsdangerous/exc.py:36-57",
+          "src/itsdangerous/timed.py:72-158",
+          "src/itsdangerous/timed.py:35-43"
+        ]
+      },
+      {
+        "id": "bh-current-time",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "src/itsdangerous/timed.py:72-158",
+          "src/itsdangerous/timed.py:29-33",
+          "docs/timed.rst:1-28"
+        ]
+      },
+      {
+        "id": "bh-fips",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "CHANGES.rst:101-160",
+          "src/itsdangerous/signer.py:40-45",
+          "CHANGES.rst:1-60"
+        ]
+      },
+      {
+        "id": "bh-constant-time",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 0.6131,
+        "top": [
+          "src/itsdangerous/signer.py:15-28",
+          "docs/concepts.rst:51-110",
+          "docs/timed.rst:1-28"
+        ]
+      },
+      {
+        "id": "bh-no-signature",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:31-37",
+          "tests/test_itsdangerous/test_signer.py:105-109",
+          "tests/test_itsdangerous/test_signer.py:13-15"
+        ]
+      },
+      {
+        "id": "bh-debug-decode",
+        "category": "behaviour",
+        "rank": 7,
+        "ndcg": 0.2044,
+        "top": [
+          "src/itsdangerous/exc.py:22-33",
+          "src/itsdangerous/exc.py:36-57",
+          "docs/serializer.rst:51-110"
+        ]
+      },
+      {
+        "id": "bh-undecodable-payload",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:92-106",
+          "docs/serializer.rst:51-110",
+          "src/itsdangerous/exc.py:66-89"
+        ]
+      },
+      {
+        "id": "bh-compact-json",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/_json.py:7-18",
+          "src/itsdangerous/serializer.py:1-21",
+          "CHANGES.rst:51-110"
+        ]
+      },
+      {
+        "id": "bh-text-or-binary",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/serializer.py:33-37",
+          "src/itsdangerous/serializer.py:309-320",
+          "src/itsdangerous/serializer.py:271-276"
+        ]
+      },
+      {
+        "id": "bh-validate-bool",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 0.9197,
+        "top": [
+          "src/itsdangerous/signer.py:258-266",
+          "src/itsdangerous/signer.py:227-242",
+          "src/itsdangerous/timed.py:160-167"
+        ]
+      },
+      {
+        "id": "doc-salt-contexts",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "docs/concepts.rst:51-110",
+          ".github/pull_request_template.md:1-25",
+          ".github/ISSUE_TEMPLATE/config.yml:1-8"
+        ]
+      },
+      {
+        "id": "doc-store-secret",
+        "category": "docs",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "src/itsdangerous/signer.py:182-213",
+          "src/itsdangerous/signer.py:76-128",
+          "docs/concepts.rst:1-60"
+        ]
+      },
+      {
+        "id": "doc-signer-vs-serializer",
+        "category": "docs",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "src/itsdangerous/serializer.py:40-106",
+          "docs/serializer.rst:51-110",
+          "docs/concepts.rst:1-60"
+        ]
+      },
+      {
+        "id": "doc-generate-key",
+        "category": "docs",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "src/itsdangerous/signer.py:182-213",
+          "docs/concepts.rst:51-110",
+          "src/itsdangerous/signer.py:76-128"
+        ]
+      },
+      {
+        "id": "doc-version-2",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "CHANGES.rst:201-260",
+          "CHANGES.rst:151-210",
+          "CHANGES.rst:251-292"
+        ]
+      },
+      {
+        "id": "doc-expiring",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/timed.py:22-28",
+          "docs/timed.rst:1-28",
+          "src/itsdangerous/exc.py:36-57"
+        ]
+      },
+      {
+        "id": "doc-url-safe",
+        "category": "docs",
+        "rank": 3,
+        "ndcg": 0.5438,
+        "top": [
+          "docs/index.rst:1-60",
+          "docs/serializer.rst:1-60",
+          "docs/url_safe.rst:1-21"
+        ]
+      }
+    ],
+    "keyword": [
+      {
+        "id": "id-want-bytes",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "tests/test_itsdangerous/test_encoding.py:11-14",
+          "src/itsdangerous/encoding.py:11-17",
+          "src/itsdangerous/signer.py:67-73"
+        ]
+      },
+      {
+        "id": "id-base64-decode",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/encoding.py:28-38",
+          "docs/encoding.rst:1-8",
+          "tests/test_itsdangerous/test_encoding.py:25-27"
+        ]
+      },
+      {
+        "id": "id-iter-unsigners",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "tests/test_itsdangerous/test_serializer.py:166-183",
+          "src/itsdangerous/serializer.py:287-307",
+          "src/itsdangerous/timed.py:170-228"
+        ]
+      },
+      {
+        "id": "id-derive-key",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:182-213",
+          "src/itsdangerous/signer.py:76-128",
+          "tests/test_itsdangerous/test_signer.py:18-102"
+        ]
+      },
+      {
+        "id": "id-signature-expired",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:60-63",
+          "src/itsdangerous/timed.py:22-28",
+          "docs/exceptions.rst:1-22"
+        ]
+      },
+      {
+        "id": "id-url-safe-timed",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/url_safe.py:79-83",
+          "tests/test_itsdangerous/test_url_safe.py:21-24",
+          "tests/test_itsdangerous/test_url_safe.py:1-8"
+        ]
+      },
+      {
+        "id": "id-loads-unsafe",
+        "category": "identifier",
+        "rank": 3,
+        "ndcg": 0.5706,
+        "top": [
+          "src/itsdangerous/serializer.py:397-404",
+          "tests/test_itsdangerous/test_serializer.py:90-110",
+          "src/itsdangerous/serializer.py:349-365"
+        ]
+      },
+      {
+        "id": "id-hmac-algorithm",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:48-64",
+          "src/itsdangerous/signer.py:15-28",
+          "src/itsdangerous/signer.py:215-220"
+        ]
+      },
+      {
+        "id": "id-make-keys-list",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:67-73",
+          "src/itsdangerous/serializer.py:1-21",
+          "src/itsdangerous/signer.py:129-173"
+        ]
+      },
+      {
+        "id": "id-bad-header",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:66-89",
+          "docs/exceptions.rst:1-22",
+          "src/itsdangerous/__init__.py:1-17"
+        ]
+      },
+      {
+        "id": "id-int-to-bytes",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/encoding.py:49-50",
+          "tests/test_itsdangerous/test_encoding.py:30-37",
+          "src/itsdangerous/encoding.py:41-46"
+        ]
+      },
+      {
+        "id": "bh-rotation-verify",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "docs/concepts.rst:101-154",
+          "src/itsdangerous/signer.py:76-128",
+          "src/itsdangerous/serializer.py:40-106"
+        ]
+      },
+      {
+        "id": "bh-future-timestamp",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "CHANGES.rst:101-160",
+          "docs/concepts.rst:101-154",
+          "README.md:3-15"
+        ]
+      },
+      {
+        "id": "bh-compress-for-url",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/url_safe.py:15-69",
+          ".github/pull_request_template.md:1-25",
+          "README.md:3-15"
+        ]
+      },
+      {
+        "id": "bh-fallback-signers",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "docs/index.rst:1-60",
+          ".devcontainer/devcontainer.json:1-17",
+          "README.md:3-15"
+        ]
+      },
+      {
+        "id": "bh-aware-datetime",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/timed.py:35-43",
+          "src/itsdangerous/exc.py:36-57",
+          "CHANGES.rst:51-110"
+        ]
+      },
+      {
+        "id": "bh-current-time",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/timed.py:29-33",
+          "docs/serializer.rst:51-110",
+          ".github/workflows/lock.yaml:1-24"
+        ]
+      },
+      {
+        "id": "bh-fips",
+        "category": "behaviour",
+        "rank": 4,
+        "ndcg": 0.4307,
+        "top": [
+          "src/itsdangerous/serializer.py:1-21",
+          "CHANGES.rst:101-160",
+          "CHANGES.rst:1-60"
+        ]
+      },
+      {
+        "id": "bh-constant-time",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.3869,
+        "top": [
+          "docs/concepts.rst:51-110",
+          "src/itsdangerous/signer.py:15-28",
+          "src/itsdangerous/__init__.py:1-17"
+        ]
+      },
+      {
+        "id": "bh-no-signature",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:31-37",
+          "CHANGES.rst:151-210",
+          "docs/concepts.rst:101-154"
+        ]
+      },
+      {
+        "id": "bh-debug-decode",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "docs/concepts.rst:1-60",
+          "docs/concepts.rst:101-154",
+          "docs/index.rst:1-60"
+        ]
+      },
+      {
+        "id": "bh-undecodable-payload",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "docs/index.rst:1-60",
+          "CHANGES.rst:101-160",
+          "src/itsdangerous/serializer.py:40-106"
+        ]
+      },
+      {
+        "id": "bh-compact-json",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/_json.py:7-18",
+          ".readthedocs.yaml:1-10",
+          "docs/concepts.rst:51-110"
+        ]
+      },
+      {
+        "id": "bh-text-or-binary",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/serializer.py:33-37",
+          ".readthedocs.yaml:1-10",
+          "LICENSE.txt:1-28"
+        ]
+      },
+      {
+        "id": "bh-validate-bool",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 0.9197,
+        "top": [
+          "src/itsdangerous/signer.py:258-266",
+          "src/itsdangerous/timed.py:72-158",
+          "src/itsdangerous/timed.py:160-167"
+        ]
+      },
+      {
+        "id": "doc-salt-contexts",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "docs/concepts.rst:51-110",
+          "docs/concepts.rst:1-60",
+          "src/itsdangerous/signer.py:76-128"
+        ]
+      },
+      {
+        "id": "doc-store-secret",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "docs/concepts.rst:1-60",
+          "src/itsdangerous/signer.py:76-128",
+          "src/itsdangerous/signer.py:182-213"
+        ]
+      },
+      {
+        "id": "doc-signer-vs-serializer",
+        "category": "docs",
+        "rank": 7,
+        "ndcg": 0.3333,
+        "top": [
+          ".github/ISSUE_TEMPLATE/feature-request.md:1-15",
+          "src/itsdangerous/signer.py:76-128",
+          ".github/pull_request_template.md:1-25"
+        ]
+      },
+      {
+        "id": "doc-generate-key",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "docs/concepts.rst:1-60",
+          "docs/index.rst:1-60",
+          "src/itsdangerous/serializer.py:349-365"
+        ]
+      },
+      {
+        "id": "doc-version-2",
+        "category": "docs",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          ".github/ISSUE_TEMPLATE/bug-report.md:1-27",
+          "CHANGES.rst:251-292",
+          "CHANGES.rst:1-60"
+        ]
+      },
+      {
+        "id": "doc-expiring",
+        "category": "docs",
+        "rank": 2,
+        "ndcg": 0.6509,
+        "top": [
+          "src/itsdangerous/exc.py:36-57",
+          "src/itsdangerous/timed.py:22-28",
+          "tests/test_itsdangerous/test_timed.py:96-115"
+        ]
+      },
+      {
+        "id": "doc-url-safe",
+        "category": "docs",
+        "rank": 9,
+        "ndcg": 0.1846,
+        "top": [
+          "README.md:3-15",
+          "docs/index.rst:1-60",
+          "docs/serializer.rst:1-60"
+        ]
+      }
+    ],
+    "vector": [
+      {
+        "id": "id-want-bytes",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/encoding.py:11-17",
+          "tests/test_itsdangerous/test_encoding.py:11-14",
+          "src/itsdangerous/encoding.py:49-50"
+        ]
+      },
+      {
+        "id": "id-base64-decode",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/encoding.py:28-38",
+          "tests/test_itsdangerous/test_encoding.py:25-27",
+          "src/itsdangerous/encoding.py:20-25"
+        ]
+      },
+      {
+        "id": "id-iter-unsigners",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/serializer.py:287-307",
+          "tests/test_itsdangerous/test_serializer.py:166-183",
+          "src/itsdangerous/signer.py:244-256"
+        ]
+      },
+      {
+        "id": "id-derive-key",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:182-213",
+          "src/itsdangerous/signer.py:76-128",
+          "tests/test_itsdangerous/test_signer.py:13-15"
+        ]
+      },
+      {
+        "id": "id-signature-expired",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:60-63",
+          "src/itsdangerous/exc.py:36-57",
+          "src/itsdangerous/timed.py:22-28"
+        ]
+      },
+      {
+        "id": "id-url-safe-timed",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/url_safe.py:79-83",
+          "src/itsdangerous/url_safe.py:72-76",
+          "tests/test_itsdangerous/test_url_safe.py:21-24"
+        ]
+      },
+      {
+        "id": "id-loads-unsafe",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6934,
+        "top": [
+          "src/itsdangerous/serializer.py:397-404",
+          "src/itsdangerous/serializer.py:367-395",
+          "src/itsdangerous/serializer.py:349-365"
+        ]
+      },
+      {
+        "id": "id-hmac-algorithm",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:48-64",
+          "src/itsdangerous/signer.py:15-28",
+          "src/itsdangerous/signer.py:31-37"
+        ]
+      },
+      {
+        "id": "id-make-keys-list",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:67-73",
+          "src/itsdangerous/serializer.py:190-234",
+          "src/itsdangerous/serializer.py:278-285"
+        ]
+      },
+      {
+        "id": "id-bad-header",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/exc.py:66-89",
+          "docs/exceptions.rst:1-22",
+          "CHANGES.rst:151-210"
+        ]
+      },
+      {
+        "id": "id-int-to-bytes",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "src/itsdangerous/encoding.py:53-54",
+          "src/itsdangerous/encoding.py:49-50",
+          "tests/test_itsdangerous/test_encoding.py:30-37"
+        ]
+      },
+      {
+        "id": "bh-rotation-verify",
+        "category": "behaviour",
+        "rank": 9,
+        "ndcg": 0.1846,
+        "top": [
+          "docs/concepts.rst:101-154",
+          "docs/concepts.rst:51-110",
+          "src/itsdangerous/serializer.py:190-234"
+        ]
+      },
+      {
+        "id": "bh-future-timestamp",
+        "category": "behaviour",
+        "rank": 7,
+        "ndcg": 0.3333,
+        "top": [
+          "src/itsdangerous/exc.py:92-106",
+          "docs/serializer.rst:51-110",
+          "tests/test_itsdangerous/test_timed.py:29-93"
+        ]
+      },
+      {
+        "id": "bh-compress-for-url",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/url_safe.py:15-69",
+          "src/itsdangerous/_json.py:7-18",
+          "src/itsdangerous/encoding.py:28-38"
+        ]
+      },
+      {
+        "id": "bh-fallback-signers",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "CHANGES.rst:101-160",
+          "src/itsdangerous/signer.py:244-256",
+          "docs/timed.rst:1-28"
+        ]
+      },
+      {
+        "id": "bh-aware-datetime",
+        "category": "behaviour",
+        "rank": 9,
+        "ndcg": 0.301,
+        "top": [
+          "src/itsdangerous/exc.py:36-57",
+          "src/itsdangerous/timed.py:72-158",
+          "docs/timed.rst:1-28"
+        ]
+      },
+      {
+        "id": "bh-current-time",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "src/itsdangerous/exc.py:36-57",
+          "docs/timed.rst:1-28",
+          "src/itsdangerous/timed.py:72-158"
+        ]
+      },
+      {
+        "id": "bh-fips",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:40-45",
+          "CHANGES.rst:101-160",
+          "docs/index.rst:51-63"
+        ]
+      },
+      {
+        "id": "bh-constant-time",
+        "category": "behaviour",
+        "rank": 3,
+        "ndcg": 0.511,
+        "top": [
+          "docs/timed.rst:1-28",
+          "tests/test_itsdangerous/test_timed.py:29-93",
+          "src/itsdangerous/signer.py:15-28"
+        ]
+      },
+      {
+        "id": "bh-no-signature",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/signer.py:31-37",
+          "tests/test_itsdangerous/test_signer.py:105-109",
+          "src/itsdangerous/signer.py:129-173"
+        ]
+      },
+      {
+        "id": "bh-debug-decode",
+        "category": "behaviour",
+        "rank": 6,
+        "ndcg": 0.2184,
+        "top": [
+          "docs/serializer.rst:51-110",
+          "src/itsdangerous/exc.py:22-33",
+          "src/itsdangerous/exc.py:92-106"
+        ]
+      },
+      {
+        "id": "bh-undecodable-payload",
+        "category": "behaviour",
+        "rank": 4,
+        "ndcg": 0.4307,
+        "top": [
+          "docs/serializer.rst:51-110",
+          "src/itsdangerous/signer.py:244-256",
+          "src/itsdangerous/exc.py:66-89"
+        ]
+      },
+      {
+        "id": "bh-compact-json",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/_json.py:7-18",
+          "src/itsdangerous/url_safe.py:15-69",
+          "src/itsdangerous/serializer.py:1-21"
+        ]
+      },
+      {
+        "id": "bh-text-or-binary",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "src/itsdangerous/serializer.py:33-37",
+          "src/itsdangerous/serializer.py:309-320",
+          "src/itsdangerous/serializer.py:271-276"
+        ]
+      },
+      {
+        "id": "bh-validate-bool",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 0.6131,
+        "top": [
+          "src/itsdangerous/signer.py:258-266",
+          "src/itsdangerous/signer.py:227-242",
+          "src/itsdangerous/signer.py:15-28"
+        ]
+      },
+      {
+        "id": "doc-salt-contexts",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "docs/concepts.rst:51-110",
+          "CHANGES.rst:101-160",
+          "pyproject.toml:151-205"
+        ]
+      },
+      {
+        "id": "doc-store-secret",
+        "category": "docs",
+        "rank": 8,
+        "ndcg": 0.3155,
+        "top": [
+          "src/itsdangerous/signer.py:182-213",
+          "src/itsdangerous/signer.py:76-128",
+          "src/itsdangerous/signer.py:175-180"
+        ]
+      },
+      {
+        "id": "doc-signer-vs-serializer",
+        "category": "docs",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "docs/serializer.rst:1-60",
+          "src/itsdangerous/serializer.py:40-106",
+          "docs/concepts.rst:1-60"
+        ]
+      },
+      {
+        "id": "doc-generate-key",
+        "category": "docs",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "src/itsdangerous/signer.py:67-73",
+          "src/itsdangerous/signer.py:182-213",
+          "docs/concepts.rst:51-110"
+        ]
+      },
+      {
+        "id": "doc-version-2",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "CHANGES.rst:201-260",
+          "CHANGES.rst:151-210",
+          "CHANGES.rst:101-160"
+        ]
+      },
+      {
+        "id": "doc-expiring",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "docs/timed.rst:1-28",
+          "src/itsdangerous/timed.py:22-28",
+          "src/itsdangerous/exc.py:60-63"
+        ]
+      },
+      {
+        "id": "doc-url-safe",
+        "category": "docs",
+        "rank": 7,
+        "ndcg": 0.2044,
+        "top": [
+          "docs/index.rst:1-60",
+          "docs/serializer.rst:1-60",
+          "src/itsdangerous/signer.py:222-225"
+        ]
+      }
+    ]
+  }
+}

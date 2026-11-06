@@ -9,6 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 
 from . import analysis, history, sources
 from .analysis import DriftReport, ImpactReport, definition_span
@@ -28,6 +29,8 @@ MAX_PULL_REQUESTS = 5
 _NAME = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 
 ProgressFn = Callable[[int, int, str], None]
+SearchMode = Literal["hybrid", "keyword", "vector"]
+SEARCH_MODES: tuple[SearchMode, ...] = ("hybrid", "keyword", "vector")
 
 
 class BrainError(ValueError):
@@ -165,14 +168,18 @@ class Brain:
         k: int = 8,
         path_prefix: str | None = None,
         kinds: list[str] | None = None,
+        mode: SearchMode = "hybrid",
     ) -> list[Hit]:
-        """Hybrid search: BM25 keywords and vector similarity, merged with reciprocal-rank fusion."""
+        """Hybrid search: BM25 keywords and vector similarity, merged with reciprocal-rank fusion.
+        ``mode`` can switch to one retriever alone; the evals use that to measure what each adds."""
         query = query.strip()
         if not query:
             raise BrainError("The query is empty.")
+        if mode not in SEARCH_MODES:
+            raise BrainError(f"mode must be one of {', '.join(SEARCH_MODES)}.")
         store = self._store(self.resolve_repo(repo))
-        keyword_ids = store.keyword_search(query, CANDIDATES)
-        vector_ids = store.vector_search(self.embedder.embed_query(query), CANDIDATES)
+        keyword_ids = store.keyword_search(query, CANDIDATES) if mode != "vector" else []
+        vector_ids = store.vector_search(self.embedder.embed_query(query), CANDIDATES) if mode != "keyword" else []
 
         scores: dict[int, float] = {}
         for ranked in (keyword_ids, vector_ids):
@@ -353,6 +360,10 @@ class Brain:
         for store in self._stores.values():
             store.close()
         self._stores.clear()
+
+    def store_for(self, repo: str | None) -> Store:
+        """The index of an indexed repo, for read-only analysis such as evals."""
+        return self._store(self.resolve_repo(repo))
 
     def _store(self, name: str) -> Store:
         if name not in self._stores:
