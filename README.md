@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
 
-An [MCP](https://modelcontextprotocol.io) server that gives AI agents a **cited, searchable memory of a codebase**.
-Point it at a local folder or a public git URL. Claude, Cursor or any MCP client can then ask questions about the
-code and get answers backed by exact `path:start-end` citations.
+An [MCP](https://modelcontextprotocol.io) server that gives AI assistants a **cited, searchable memory of a
+codebase**, including its history. Point it at a local folder or a public git URL. Claude, Cursor or any MCP client
+can then answer questions about the code with exact `path:start-end` citations.
 
 ![Claude Code using Project Brain to explain the history, impact and docs of a function](assets/demo.gif)
 
@@ -14,7 +14,36 @@ code and get answers backed by exact `path:start-end` citations.
 docs are current. Project Brain answers with commits, callers, tests and doc findings, all cited. (Waiting time
 sped up.)*
 
-## Why it's different
+## The problem
+
+AI coding assistants are good at writing new code but struggle to understand code that already exists:
+
+- **They can't see the whole project.** A real codebase has thousands of files. The assistant reads a few and
+  guesses the rest, so it misses the function that matters or invents one that doesn't exist.
+- **You can't check their answers.** "Expiry is handled in the auth module" is no use if you can't see where. Without
+  file and line references, you have to trust the answer or re-read the code yourself.
+- **They don't know why code is the way it is.** The code shows *what* it does. The reasons ("we added this check
+  because it crashed on Windows") live in git history and pull requests, which assistants never read. So they
+  "clean up" code that exists for a reason and bring old bugs back.
+- **They don't know what a change will break,** or whether the documentation still matches the code.
+- **Many tools send your code to someone else's server** to make it searchable.
+
+## What Project Brain gives you
+
+A plug-in for any AI assistant that turns a codebase into something it can actually look things up in:
+
+- **Answers with proof.** Every result points to the exact file and lines, and the assistant can open them.
+- **Search that understands code.** It finds code whether you type the exact name (`calculate_invoice_total`) or
+  describe it in plain words ("how are invoices totalled?").
+- **The story behind the code.** For any function, it shows every change made to it, who made it, why (from the
+  commit message and pull request), and what the change was.
+- **What breaks if you change something.** Everything that uses a function, directly or indirectly, and the tests
+  that cover it.
+- **Out-of-date docs, found automatically.** Documentation that mentions functions, files or settings that no longer
+  exist, or shows examples that would no longer work.
+- **Private by design.** Everything runs on your machine. No API keys, and your code never leaves your computer.
+
+## Why it's different (technical)
 
 - **Code-aware chunking.** Python is split by function, class and method using the real syntax tree, Markdown by
   heading. Each chunk knows its symbol (`TimestampSigner.unsign`) and exact lines, so citations point at real code.
@@ -103,6 +132,51 @@ planted mistakes, it catches every one: a moved file, a renamed function (with t
 setting and flag, a keyword argument the function doesn't take, and an import that would fail. Changelogs are skipped,
 because they're supposed to mention removed things.
 
+## Evaluation
+
+Does search actually put the right code in front of the model? `project-brain eval` answers that with a benchmark.
+The benchmark has 32 questions about [pallets/itsdangerous](https://github.com/pallets/itsdangerous), pinned to
+commit `672971d`, each with the code or docs a good answer must come from. The questions are in
+[`evals/datasets/itsdangerous.toml`](evals/datasets/itsdangerous.toml). They were written by reading the code
+before any results were measured, and haven't been changed since.
+
+| Mode | Hit@1 | Hit@3 | Hit@5 | Hit@10 | MRR@10 (95% CI) | nDCG@10 | p50 latency |
+|---|---|---|---|---|---|---|---|
+| **hybrid** (default) | 56% | **88%** | **88%** | 91% | **0.697** (0.56–0.82) | **0.735** | 5 ms |
+| keyword only (BM25) | 56% | 75% | 78% | 84% | 0.667 (0.52–0.80) | 0.699 | <1 ms |
+| vector only (bge-small) | 56% | 72% | 75% | 94% | 0.658 (0.51–0.80) | 0.701 | 4 ms |
+
+| Hit@5 by question type | describes behaviour (14) | about the docs (7) | names the code (11) |
+|---|---|---|---|
+| hybrid | **71%** | **100%** | 100% |
+| keyword only | 64% | 71% | 100% |
+| vector only | 57% | 71% | 100% |
+
+**What this shows:**
+- **Hybrid finds a right answer in the top 3 for 88% of questions,** against 75% and 72% for either method alone.
+  The gain comes from questions written in plain words and questions about the docs. When the question names the
+  code, every mode finds it.
+- **It's honest about uncertainty.** With 32 questions, the confidence intervals for MRR overlap, so hybrid is better
+  *on this set* but not yet proven in general. Per question, hybrid beats keyword-only on 8 questions and loses on 4.
+- **It has known misses.** Four questions describing behaviour in very different words from the code don't reach
+  the top 5. They're listed in [`evals/results/itsdangerous.md`](evals/results/itsdangerous.md) and are the next
+  thing to improve. A larger, held-out question set will come first, so any tuning isn't fitted to these 32.
+
+Reproduce it (the first run downloads the repo and the embedding model):
+
+```bash
+uv run project-brain eval evals/datasets/itsdangerous.toml --out evals/results
+```
+
+How it's measured:
+- **Hit@k:** a relevant result is in the top k.
+- **MRR:** 1 / rank of the first relevant result.
+- **nDCG@10:** each target is credited once, so duplicate chunks don't inflate the score.
+- **Confidence intervals:** 95% bootstrap over questions, seeded.
+- **Relevance:** a result is relevant if it's in the target file and, when the target names a symbol, is that symbol
+  or one of its methods.
+- **Dataset rot:** the harness fails if a target no longer exists at the pinned commit.
+
 ## How it works
 
 ```
@@ -124,7 +198,7 @@ query  ─► BM25 top 50 ┐
 ## Development
 
 ```bash
-uv run pytest           # 38 tests, offline (hash embedder, temporary git repos, in-process MCP client)
+uv run pytest           # 45 tests, offline (hash embedder, temporary git repos, in-process MCP client)
 uv run ruff check .     # lint
 uv run ruff format .    # format
 uv run pyright          # types
@@ -136,4 +210,6 @@ uv run pyright          # types
 - [x] Symbol references and transitive dependents: `impact_of_change`
 - [x] `find_doc_drift`: Markdown and reStructuredText, signatures, imports, settings, flags, staleness
 - [ ] tree-sitter chunking for more languages
-- [ ] Streamable HTTP deployment with auth, retrieval evals, and OpenTelemetry tracing
+- [x] Retrieval evals with confidence intervals (`project-brain eval`)
+- [ ] Larger held-out eval set, then retrieval tuning (reranking, query expansion)
+- [ ] Streamable HTTP deployment with auth, and OpenTelemetry tracing
