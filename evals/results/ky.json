@@ -1,0 +1,1207 @@
+{
+  "dataset": "ky",
+  "commit": "3541888878c4d303a8bc2ad61815f4e048f55a5d",
+  "embedder": "fastembed:BAAI/bge-small-en-v1.5",
+  "depth": 10,
+  "summaries": {
+    "hybrid": {
+      "hit_at": {
+        "1": 0.46875,
+        "3": 0.65625,
+        "5": 0.6875,
+        "10": 0.78125
+      },
+      "mrr": 0.5630208333333333,
+      "mrr_ci": [
+        0.41302083333333334,
+        0.7135416666666666
+      ],
+      "hit5_ci": [
+        0.53125,
+        0.84375
+      ],
+      "ndcg": 0.5764149362748362,
+      "recall": 0.6979166666666666,
+      "latency_p50_ms": 5.784103937912732,
+      "latency_p95_ms": 7.247705938061699,
+      "by_category": {
+        "behaviour": {
+          "queries": 14,
+          "hit@1": 0.07142857142857142,
+          "hit@5": 0.35714285714285715,
+          "mrr": 0.17976190476190476
+        },
+        "docs": {
+          "queries": 7,
+          "hit@1": 0.8571428571428571,
+          "hit@5": 1.0,
+          "mrr": 0.9285714285714286
+        },
+        "identifier": {
+          "queries": 11,
+          "hit@1": 0.7272727272727273,
+          "hit@5": 0.9090909090909091,
+          "mrr": 0.8181818181818182
+        }
+      }
+    },
+    "keyword": {
+      "hit_at": {
+        "1": 0.375,
+        "3": 0.4375,
+        "5": 0.53125,
+        "10": 0.625
+      },
+      "mrr": 0.4357142857142857,
+      "mrr_ci": [
+        0.28496837797619046,
+        0.5932291666666667
+      ],
+      "hit5_ci": [
+        0.34375,
+        0.71875
+      ],
+      "ndcg": 0.45508658108744326,
+      "recall": 0.578125,
+      "latency_p50_ms": 1.2917289859615266,
+      "latency_p95_ms": 1.7085543426219374,
+      "by_category": {
+        "behaviour": {
+          "queries": 14,
+          "hit@1": 0.0,
+          "hit@5": 0.07142857142857142,
+          "mrr": 0.05306122448979592
+        },
+        "docs": {
+          "queries": 7,
+          "hit@1": 0.7142857142857143,
+          "hit@5": 0.8571428571428571,
+          "mrr": 0.7428571428571429
+        },
+        "identifier": {
+          "queries": 11,
+          "hit@1": 0.6363636363636364,
+          "hit@5": 0.9090909090909091,
+          "mrr": 0.7272727272727273
+        }
+      }
+    },
+    "vector": {
+      "hit_at": {
+        "1": 0.46875,
+        "3": 0.6875,
+        "5": 0.75,
+        "10": 0.78125
+      },
+      "mrr": 0.59375,
+      "mrr_ci": [
+        0.4557291666666667,
+        0.7369791666666666
+      ],
+      "hit5_ci": [
+        0.59375,
+        0.90625
+      ],
+      "ndcg": 0.6039804654558598,
+      "recall": 0.7135416666666666,
+      "latency_p50_ms": 4.7977499780245125,
+      "latency_p95_ms": 8.08923319564201,
+      "by_category": {
+        "behaviour": {
+          "queries": 14,
+          "hit@1": 0.07142857142857142,
+          "hit@5": 0.42857142857142855,
+          "mrr": 0.24404761904761904
+        },
+        "docs": {
+          "queries": 7,
+          "hit@1": 0.8571428571428571,
+          "hit@5": 1.0,
+          "mrr": 0.9285714285714286
+        },
+        "identifier": {
+          "queries": 11,
+          "hit@1": 0.7272727272727273,
+          "hit@5": 1.0,
+          "mrr": 0.8257575757575758
+        }
+      }
+    }
+  },
+  "paired": {
+    "hybrid vs keyword": {
+      "wins": 12,
+      "ties": 20,
+      "losses": 0
+    },
+    "hybrid vs vector": {
+      "wins": 5,
+      "ties": 18,
+      "losses": 9
+    }
+  },
+  "queries": {
+    "hybrid": [
+      {
+        "id": "id-normalize-retry-options",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/normalize.ts:37-100",
+          "test/normalize.ts:1-57",
+          "source/utils/normalize.ts:11-15"
+        ]
+      },
+      {
+        "id": "id-merge-headers",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/merge.ts:73-86",
+          "test/merge.ts:7-7",
+          "source/utils/merge.ts:186-196"
+        ]
+      },
+      {
+        "id": "id-get-body-size",
+        "category": "identifier",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "test/body-size.ts:101-160",
+          "test/body-size.ts:51-110",
+          "source/utils/body.ts:28-76"
+        ]
+      },
+      {
+        "id": "id-http-error",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "source/errors/KyError.ts:1-14",
+          "source/errors/HTTPError.ts:6-34",
+          "readme.md:1291-1311"
+        ]
+      },
+      {
+        "id": "id-calculate-retry-delay",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/Ky.ts:688-763",
+          "source/core/retry-timing.ts:151-173",
+          "test/retry-timing.ts:1-60"
+        ]
+      },
+      {
+        "id": "id-retry-timing-header",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/retry-timing.ts:25-49",
+          "test/retry.ts:842-901",
+          "test/retry.ts:742-801"
+        ]
+      },
+      {
+        "id": "id-find-unknown-options",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/options.ts:5-30",
+          "source/core/Ky.ts:1007-1011",
+          "test/merge.ts:159-218"
+        ]
+      },
+      {
+        "id": "id-create-instance",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/index.ts:33-56",
+          "test/main.ts:3475-3534",
+          "test/merge.ts:309-368"
+        ]
+      },
+      {
+        "id": "id-is-retry-marker",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/constants.ts:175-176",
+          "source/core/constants.ts:159-173",
+          "test/merge.ts:209-268"
+        ]
+      },
+      {
+        "id": "id-hooks-type",
+        "category": "identifier",
+        "rank": 6,
+        "ndcg": 0.3562,
+        "top": [
+          "test/hooks.ts:4120-4179",
+          "test-d/hooks.ts:8-17",
+          "test/hooks.ts:170-229"
+        ]
+      },
+      {
+        "id": "id-validate-json-schema",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/Ky.ts:329-346",
+          "readme.md:1357-1378",
+          "test/main.ts:775-834"
+        ]
+      },
+      {
+        "id": "be-network-error-messages",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "readme.md:1411-1432",
+          "source/utils/is-network-error.ts:1-13",
+          "test/errors.ts:230-289"
+        ]
+      },
+      {
+        "id": "be-timeout-race",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/timeout.ts:10-46",
+          "source/core/Ky.ts:931-1005",
+          "source/core/Ky.ts:1125-1216"
+        ]
+      },
+      {
+        "id": "be-late-response-discarded",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/response-size.ts:501-560",
+          "test/resilience.ts:466-525",
+          "test/resilience.ts:968-1027"
+        ]
+      },
+      {
+        "id": "be-wait-cancellable",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/retry.ts:5312-5371",
+          "test/resilience.ts:566-625",
+          "test/retry.ts:4762-4821"
+        ]
+      },
+      {
+        "id": "be-parse-http-date",
+        "category": "behaviour",
+        "rank": 4,
+        "ndcg": 0.2641,
+        "top": [
+          "source/core/retry-timing.ts:1-9",
+          "test/retry.ts:892-951",
+          "test/retry-timing.ts:101-160"
+        ]
+      },
+      {
+        "id": "be-download-progress",
+        "category": "behaviour",
+        "rank": 3,
+        "ndcg": 0.3066,
+        "top": [
+          "readme.md:795-825",
+          "test/response-size.ts:501-560",
+          "source/utils/body.ts:200-214"
+        ]
+      },
+      {
+        "id": "be-delete-header",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/headers.ts:816-875",
+          "readme.md:1008-1097",
+          "test/headers.ts:766-825"
+        ]
+      },
+      {
+        "id": "be-method-uppercase",
+        "category": "behaviour",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "readme.md:232-259",
+          "readme.md:176-184",
+          "source/utils/normalize.ts:6-7"
+        ]
+      },
+      {
+        "id": "be-unknown-options-forwarded",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "source/types/options.ts:451-513",
+          "test/fetch.ts:901-960",
+          "readme.md:93-149"
+        ]
+      },
+      {
+        "id": "be-response-too-big",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/stream.ts:1397-1456",
+          "test/response-handling.ts:82-141",
+          "test/stream.ts:1247-1306"
+        ]
+      },
+      {
+        "id": "be-retry-limit-reached",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/resilience.ts:616-675",
+          "test/resilience.ts:566-625",
+          "test/resilience.ts:266-325"
+        ]
+      },
+      {
+        "id": "be-total-deadline",
+        "category": "behaviour",
+        "rank": 6,
+        "ndcg": 0.1672,
+        "top": [
+          "test/resilience.ts:566-625",
+          "test/resilience.ts:466-525",
+          "test/resilience.ts:516-575"
+        ]
+      },
+      {
+        "id": "be-custom-json-parser",
+        "category": "behaviour",
+        "rank": 10,
+        "ndcg": 0.1772,
+        "top": [
+          "test/validation.ts:56-115",
+          "source/core/Ky.ts:220-232",
+          "test/validation.ts:106-165"
+        ]
+      },
+      {
+        "id": "be-form-field-escaping",
+        "category": "behaviour",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "source/utils/body.ts:24-25",
+          "test/body-size.ts:201-233",
+          "source/utils/body.ts:26-26"
+        ]
+      },
+      {
+        "id": "docs-baseurl-vs-prefix",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.9675,
+        "top": [
+          "readme.md:1751-1777",
+          "readme.md:232-259",
+          "source/core/Ky.ts:245-270"
+        ]
+      },
+      {
+        "id": "docs-token-refresh",
+        "category": "docs",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "test/hooks.ts:4770-4829",
+          "readme.md:1798-1815",
+          "test/hooks.ts:4670-4729"
+        ]
+      },
+      {
+        "id": "docs-proxy",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1561-1579",
+          "readme.md:1559-1560",
+          "readme.md:1580-1609"
+        ]
+      },
+      {
+        "id": "docs-cancel",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1532-1558",
+          "source/utils/body.ts:10-20",
+          "test/hooks.ts:7620-7679"
+        ]
+      },
+      {
+        "id": "docs-auth-header-every-request",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.6131,
+        "top": [
+          "readme.md:1782-1797",
+          "test/hooks.ts:4620-4679",
+          "readme.md:1798-1815"
+        ]
+      },
+      {
+        "id": "docs-pagination",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1685-1699",
+          "test/request-construction.ts:118-177",
+          "test/browser.ts:245-304"
+        ]
+      },
+      {
+        "id": "docs-stop-retrying",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.8316,
+        "top": [
+          "readme.md:1854-1873",
+          "test/hooks.ts:3920-3979",
+          "test/hooks.ts:7870-7929"
+        ]
+      }
+    ],
+    "keyword": [
+      {
+        "id": "id-normalize-retry-options",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "test/normalize.ts:1-57",
+          "source/utils/normalize.ts:37-100",
+          "source/core/Ky.ts:1-64"
+        ]
+      },
+      {
+        "id": "id-merge-headers",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/merge.ts:73-86",
+          "source/core/Ky.ts:1-64",
+          "source/core/Ky.ts:457-516"
+        ]
+      },
+      {
+        "id": "id-get-body-size",
+        "category": "identifier",
+        "rank": 4,
+        "ndcg": 0.4307,
+        "top": [
+          "test/body-size.ts:51-110",
+          "test/body-size.ts:101-160",
+          "test/body-size.ts:151-210"
+        ]
+      },
+      {
+        "id": "id-http-error",
+        "category": "identifier",
+        "rank": 4,
+        "ndcg": 0.4307,
+        "top": [
+          "source/errors/KyError.ts:1-14",
+          "readme.md:1291-1311",
+          "readme.md:51-90"
+        ]
+      },
+      {
+        "id": "id-calculate-retry-delay",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/Ky.ts:688-763",
+          "test/retry.ts:2242-2301",
+          "test/retry.ts:2292-2351"
+        ]
+      },
+      {
+        "id": "id-retry-timing-header",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/retry-timing.ts:25-49",
+          "test/retry-timing.ts:51-110",
+          "test/retry.ts:842-901"
+        ]
+      },
+      {
+        "id": "id-find-unknown-options",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/options.ts:5-30",
+          "source/core/Ky.ts:1218-1274",
+          "source/core/Ky.ts:1-64"
+        ]
+      },
+      {
+        "id": "id-create-instance",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/index.ts:33-56",
+          "source/index.ts:58-114",
+          "test/headers.ts:416-475"
+        ]
+      },
+      {
+        "id": "id-is-retry-marker",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/constants.ts:175-176",
+          "source/core/constants.ts:159-173",
+          "test/hooks.ts:7870-7929"
+        ]
+      },
+      {
+        "id": "id-hooks-type",
+        "category": "identifier",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/hooks.ts:2270-2329",
+          "test/hooks.ts:170-229",
+          "source/utils/merge.ts:218-231"
+        ]
+      },
+      {
+        "id": "id-validate-json-schema",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/Ky.ts:329-346",
+          "test/main.ts:775-834",
+          "test/main.ts:625-684"
+        ]
+      },
+      {
+        "id": "be-network-error-messages",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "readme.md:1411-1432",
+          "test/browser.ts:23-31",
+          "source/utils/is-network-error.ts:1-13"
+        ]
+      },
+      {
+        "id": "be-timeout-race",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/resilience.ts:959-966",
+          "test/helpers/with-performance.ts:11-14",
+          "source/core/Ky.ts:135-195"
+        ]
+      },
+      {
+        "id": "be-late-response-discarded",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "readme.md:404-414",
+          "source/types/ResponsePromise.ts:1-7",
+          "source/types/options.ts:195-254"
+        ]
+      },
+      {
+        "id": "be-wait-cancellable",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/retry.ts:4762-4821",
+          "test/resilience.ts:1-22",
+          "test/hooks.ts:7670-7729"
+        ]
+      },
+      {
+        "id": "be-parse-http-date",
+        "category": "behaviour",
+        "rank": 6,
+        "ndcg": 0.2184,
+        "top": [
+          "test/hooks.ts:4270-4329",
+          "test/retry-timing.ts:101-160",
+          "test/retry.ts:892-951"
+        ]
+      },
+      {
+        "id": "be-download-progress",
+        "category": "behaviour",
+        "rank": 10,
+        "ndcg": 0.1772,
+        "top": [
+          "readme.md:795-825",
+          "source/types/options.ts:245-304",
+          "test/retry.ts:5262-5321"
+        ]
+      },
+      {
+        "id": "be-delete-header",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "source/types/ky.ts:55-114",
+          "readme.md:1008-1097",
+          "source/types/options.ts:451-513"
+        ]
+      },
+      {
+        "id": "be-method-uppercase",
+        "category": "behaviour",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "readme.md:1120-1147",
+          "source/types/options.ts:451-513",
+          "source/utils/normalize.ts:6-7"
+        ]
+      },
+      {
+        "id": "be-unknown-options-forwarded",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "readme.md:1778-1781",
+          "readme.md:461-464",
+          "test/hooks.ts:7870-7929"
+        ]
+      },
+      {
+        "id": "be-response-too-big",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/stream.ts:1447-1506",
+          "readme.md:795-825",
+          "test/stream.ts:1247-1306"
+        ]
+      },
+      {
+        "id": "be-retry-limit-reached",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/resilience.ts:616-675",
+          "test/resilience.ts:566-625",
+          "source/core/Ky.ts:814-853"
+        ]
+      },
+      {
+        "id": "be-total-deadline",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/resilience.ts:566-625",
+          "test/resilience.ts:1-22",
+          "readme.md:415-439"
+        ]
+      },
+      {
+        "id": "be-custom-json-parser",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/validation.ts:56-115",
+          "test/fetch.ts:901-960",
+          "readme.md:480-509"
+        ]
+      },
+      {
+        "id": "be-form-field-escaping",
+        "category": "behaviour",
+        "rank": 7,
+        "ndcg": 0.3333,
+        "top": [
+          "source/utils/body.ts:24-25",
+          "test/body-size.ts:201-233",
+          "test/browser.ts:895-905"
+        ]
+      },
+      {
+        "id": "docs-baseurl-vs-prefix",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.9218,
+        "top": [
+          "readme.md:1751-1777",
+          "readme.md:232-259",
+          "source/core/Ky.ts:245-270"
+        ]
+      },
+      {
+        "id": "docs-token-refresh",
+        "category": "docs",
+        "rank": 5,
+        "ndcg": 0.3869,
+        "top": [
+          "test/hooks.ts:4770-4829",
+          "test/hooks.ts:4720-4779",
+          "test/hooks.ts:4670-4729"
+        ]
+      },
+      {
+        "id": "docs-proxy",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1561-1579",
+          "readme.md:1559-1560",
+          "readme.md:1580-1609"
+        ]
+      },
+      {
+        "id": "docs-cancel",
+        "category": "docs",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "readme.md:1778-1781",
+          "readme.md:1912-1926",
+          "readme.md:1816-1829"
+        ]
+      },
+      {
+        "id": "docs-auth-header-every-request",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.6131,
+        "top": [
+          "readme.md:1782-1797",
+          "readme.md:946-1007",
+          "source/types/options.ts:345-404"
+        ]
+      },
+      {
+        "id": "docs-pagination",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1685-1699",
+          "test/resilience.ts:166-225",
+          "test/retry.ts:5012-5071"
+        ]
+      },
+      {
+        "id": "docs-stop-retrying",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.9197,
+        "top": [
+          "readme.md:1854-1873",
+          "test/http-metadata.ts:151-198",
+          "readme.md:1120-1147"
+        ]
+      }
+    ],
+    "vector": [
+      {
+        "id": "id-normalize-retry-options",
+        "category": "identifier",
+        "rank": 3,
+        "ndcg": 0.5,
+        "top": [
+          "source/utils/normalize.ts:11-15",
+          "source/types/options.ts:520-522",
+          "source/utils/normalize.ts:37-100"
+        ]
+      },
+      {
+        "id": "id-merge-headers",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/merge.ts:73-86",
+          "source/utils/merge.ts:186-196",
+          "test/merge.ts:7-7"
+        ]
+      },
+      {
+        "id": "id-get-body-size",
+        "category": "identifier",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "test/body-size.ts:101-160",
+          "source/utils/body.ts:28-76",
+          "test/body-size.ts:151-210"
+        ]
+      },
+      {
+        "id": "id-http-error",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/errors/HTTPError.ts:6-34",
+          "source/errors/HTTPError.ts:1-4",
+          "source/errors/NetworkError.ts:4-19"
+        ]
+      },
+      {
+        "id": "id-calculate-retry-delay",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/Ky.ts:688-763",
+          "source/core/retry-timing.ts:151-173",
+          "source/core/Ky.ts:665-686"
+        ]
+      },
+      {
+        "id": "id-retry-timing-header",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/retry-timing.ts:25-49",
+          "test/retry.ts:842-901",
+          "test/retry.ts:742-801"
+        ]
+      },
+      {
+        "id": "id-find-unknown-options",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/options.ts:5-30",
+          "source/utils/options.ts:1-3",
+          "test/fetch.ts:151-210"
+        ]
+      },
+      {
+        "id": "id-create-instance",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/index.ts:33-56",
+          "test/merge.ts:309-368",
+          "readme.md:1098-1115"
+        ]
+      },
+      {
+        "id": "id-is-retry-marker",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/constants.ts:175-176",
+          "source/core/constants.ts:159-173",
+          "test/browser.ts:695-754"
+        ]
+      },
+      {
+        "id": "id-hooks-type",
+        "category": "identifier",
+        "rank": 4,
+        "ndcg": 0.4307,
+        "top": [
+          "source/types/hooks.ts:110-110",
+          "source/types/hooks.ts:77-77",
+          "source/types/hooks.ts:42-42"
+        ]
+      },
+      {
+        "id": "id-validate-json-schema",
+        "category": "identifier",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/core/Ky.ts:329-346",
+          "test/main.ts:525-584",
+          "readme.md:1357-1378"
+        ]
+      },
+      {
+        "id": "be-network-error-messages",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "test/errors.ts:230-289",
+          "source/utils/is-network-error.ts:15-46",
+          "readme.md:1411-1432"
+        ]
+      },
+      {
+        "id": "be-timeout-race",
+        "category": "behaviour",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "source/utils/timeout.ts:10-46",
+          "test/browser.ts:745-804",
+          "test/retry.ts:4262-4321"
+        ]
+      },
+      {
+        "id": "be-late-response-discarded",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/main.ts:1075-1134",
+          "test/response-handling.ts:23-30",
+          "test/main.ts:1175-1234"
+        ]
+      },
+      {
+        "id": "be-wait-cancellable",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/resilience.ts:466-525",
+          "test/resilience.ts:316-375",
+          "test/retry.ts:5312-5371"
+        ]
+      },
+      {
+        "id": "be-parse-http-date",
+        "category": "behaviour",
+        "rank": 6,
+        "ndcg": 0.2184,
+        "top": [
+          "source/core/retry-timing.ts:1-9",
+          "test/retry.ts:136-140",
+          "test/retry.ts:592-651"
+        ]
+      },
+      {
+        "id": "be-download-progress",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/stream.ts:901-960",
+          "test/request-body-serialization.ts:24-27",
+          "test/request-body-serialization.ts:6-10"
+        ]
+      },
+      {
+        "id": "be-delete-header",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/headers.ts:816-875",
+          "source/core/Ky.ts:217-218",
+          "test/headers.ts:866-925"
+        ]
+      },
+      {
+        "id": "be-method-uppercase",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "readme.md:151-151",
+          "readme.md:162-169",
+          "test/request-construction.ts:318-377"
+        ]
+      },
+      {
+        "id": "be-unknown-options-forwarded",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "readme.md:170-175",
+          "source/utils/options.ts:5-30",
+          "test-d/fetch-options.ts:1-6"
+        ]
+      },
+      {
+        "id": "be-response-too-big",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/response-handling.ts:82-141",
+          "readme.md:440-460",
+          "test/stream.ts:1397-1456"
+        ]
+      },
+      {
+        "id": "be-retry-limit-reached",
+        "category": "behaviour",
+        "rank": null,
+        "ndcg": 0.0,
+        "top": [
+          "test/retry.ts:4612-4671",
+          "test/retry-decisions.ts:316-375",
+          "test/resilience.ts:116-175"
+        ]
+      },
+      {
+        "id": "be-total-deadline",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.2961,
+        "top": [
+          "test/resilience.ts:566-625",
+          "source/core/Ky.ts:1281-1284",
+          "test/resilience.ts:466-525"
+        ]
+      },
+      {
+        "id": "be-custom-json-parser",
+        "category": "behaviour",
+        "rank": 4,
+        "ndcg": 0.5013,
+        "top": [
+          "source/core/Ky.ts:220-232",
+          "test/validation.ts:56-115",
+          "test/hooks.ts:6570-6629"
+        ]
+      },
+      {
+        "id": "be-form-field-escaping",
+        "category": "behaviour",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "source/utils/body.ts:24-25",
+          "source/utils/body.ts:26-26",
+          "test/body-size.ts:201-233"
+        ]
+      },
+      {
+        "id": "docs-baseurl-vs-prefix",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1751-1777",
+          "readme.md:232-259",
+          "readme.md:206-231"
+        ]
+      },
+      {
+        "id": "docs-token-refresh",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1798-1815",
+          "test/hooks.ts:4770-4829",
+          "test/hooks.ts:4670-4729"
+        ]
+      },
+      {
+        "id": "docs-proxy",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1559-1560",
+          "readme.md:1561-1579",
+          "readme.md:1580-1609"
+        ]
+      },
+      {
+        "id": "docs-cancel",
+        "category": "docs",
+        "rank": 2,
+        "ndcg": 0.6309,
+        "top": [
+          "source/core/Ky.ts:82-87",
+          "readme.md:1532-1558",
+          "readme.md:1201-1213"
+        ]
+      },
+      {
+        "id": "docs-auth-header-every-request",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.6131,
+        "top": [
+          "readme.md:1782-1797",
+          "test/hooks.ts:4620-4679",
+          "readme.md:1798-1815"
+        ]
+      },
+      {
+        "id": "docs-pagination",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 1.0,
+        "top": [
+          "readme.md:1685-1699",
+          "readme.md:170-175",
+          "readme.md:918-945"
+        ]
+      },
+      {
+        "id": "docs-stop-retrying",
+        "category": "docs",
+        "rank": 1,
+        "ndcg": 0.6131,
+        "top": [
+          "readme.md:1854-1873",
+          "test/hooks.ts:3920-3979",
+          "test-d/hooks.ts:53-54"
+        ]
+      }
+    ]
+  }
+}

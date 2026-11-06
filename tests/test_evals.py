@@ -24,6 +24,11 @@ def test_target_matches_symbol_its_methods_or_whole_file():
     assert Target("docs/x.rst").matches(chunk("docs/x.rst"))
 
 
+def test_target_matches_a_doc_section_and_its_subsections():
+    assert Target("readme.md", "API > retry").matches(chunk("readme.md", "API > retry > delay"))
+    assert not Target("readme.md", "API > retry").matches(chunk("readme.md", "API > retryOptions"))
+
+
 def test_first_relevant_rank_and_reciprocal_rank():
     ranked = [chunk("x.py", "a"), chunk("y.py", "b"), chunk("z.py", "c")]
 

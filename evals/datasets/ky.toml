@@ -1,0 +1,244 @@
+# Retrieval benchmark on sindresorhus/ky (TypeScript), pinned to one commit so results are reproducible.
+#
+# Each query lists the chunks a good answer must come from. A target is a file path, optionally
+# narrowed to a symbol (function, class, method, interface or type) or, for docs, a README section
+# path such as "FAQ > How do I stop retrying early?". A result counts as relevant if it is in that
+# file and, when a symbol is given, is that symbol, one of its methods, or one of its subsections.
+#
+# The queries were written by reading the code and the readme, before any results were measured,
+# and were not edited afterwards to improve scores. The readme is one 2,000-line file, so docs
+# targets name a section: naming only the file would count any readme chunk as a hit.
+#
+# Categories:
+#   identifier  the query names the code (what a developer types when they know the name)
+#   behaviour   the query describes what code does, in different words from the code
+#   docs        the answer is in the readme, not the code
+
+name = "ky"
+repo = "https://github.com/sindresorhus/ky"
+commit = "3541888878c4d303a8bc2ad61815f4e048f55a5d"
+
+# ---- identifier --------------------------------------------------------------------------------
+
+[[query]]
+id = "id-normalize-retry-options"
+category = "identifier"
+text = "normalizeRetryOptions"
+targets = [{ path = "source/utils/normalize.ts", symbol = "normalizeRetryOptions" }]
+
+[[query]]
+id = "id-merge-headers"
+category = "identifier"
+text = "mergeHeaders"
+targets = [{ path = "source/utils/merge.ts", symbol = "mergeHeaders" }]
+
+[[query]]
+id = "id-get-body-size"
+category = "identifier"
+text = "getBodySize FormData"
+targets = [{ path = "source/utils/body.ts", symbol = "getBodySize" }]
+
+[[query]]
+id = "id-http-error"
+category = "identifier"
+text = "HTTPError class"
+targets = [{ path = "source/errors/HTTPError.ts", symbol = "HTTPError" }]
+
+[[query]]
+id = "id-calculate-retry-delay"
+category = "identifier"
+text = "calculateRetryDelay"
+targets = [{ path = "source/core/Ky.ts", symbol = "Ky.#calculateRetryDelay" }]
+
+[[query]]
+id = "id-retry-timing-header"
+category = "identifier"
+text = "getRetryTimingHeader RateLimit-Reset"
+targets = [{ path = "source/core/retry-timing.ts", symbol = "getRetryTimingHeader" }]
+
+[[query]]
+id = "id-find-unknown-options"
+category = "identifier"
+text = "findUnknownOptions"
+targets = [{ path = "source/utils/options.ts", symbol = "findUnknownOptions" }]
+
+[[query]]
+id = "id-create-instance"
+category = "identifier"
+text = "createInstance extend"
+targets = [{ path = "source/index.ts", symbol = "createInstance" }]
+
+[[query]]
+id = "id-is-retry-marker"
+category = "identifier"
+text = "isRetryMarker"
+targets = [{ path = "source/core/constants.ts", symbol = "isRetryMarker" }]
+
+[[query]]
+id = "id-hooks-type"
+category = "identifier"
+text = "Hooks type beforeRetry afterResponse"
+targets = [{ path = "source/types/hooks.ts", symbol = "Hooks" }]
+
+[[query]]
+id = "id-validate-json-schema"
+category = "identifier"
+text = "validateJsonWithSchema"
+targets = [{ path = "source/core/Ky.ts", symbol = "validateJsonWithSchema" }]
+
+# ---- behaviour ---------------------------------------------------------------------------------
+
+[[query]]
+id = "be-network-error-messages"
+category = "behaviour"
+text = "recognise a connection failure from the browser's error message text"
+targets = [{ path = "source/utils/is-network-error.ts", symbol = "isRawNetworkError" }]
+
+[[query]]
+id = "be-timeout-race"
+category = "behaviour"
+text = "abort the request when it takes longer than the allowed time"
+targets = [{ path = "source/utils/timeout.ts", symbol = "timeout" }]
+
+[[query]]
+id = "be-late-response-discarded"
+category = "behaviour"
+text = "a reply that arrives after the deadline has passed is thrown away"
+targets = [{ path = "source/utils/timeout.ts", symbol = "timeout" }]
+
+[[query]]
+id = "be-wait-cancellable"
+category = "behaviour"
+text = "sleep between attempts but stop waiting if the caller cancels"
+targets = [{ path = "source/utils/delay.ts", symbol = "delay" }]
+
+[[query]]
+id = "be-parse-http-date"
+category = "behaviour"
+text = "turn an HTTP date string from the server into a wait time"
+targets = [
+    { path = "source/core/retry-timing.ts", symbol = "parseDate" },
+    { path = "source/core/retry-timing.ts", symbol = "calculateRetryTimingDelay" },
+]
+
+[[query]]
+id = "be-download-progress"
+category = "behaviour"
+text = "report how many bytes have been received so far while reading the body"
+targets = [
+    { path = "source/utils/body.ts", symbol = "streamResponse" },
+    { path = "source/utils/body.ts", symbol = "withProgress" },
+]
+
+[[query]]
+id = "be-delete-header"
+category = "behaviour"
+text = "setting a header to undefined removes it when combining defaults with per-call headers"
+targets = [{ path = "source/utils/merge.ts", symbol = "mergeHeaders" }]
+
+[[query]]
+id = "be-method-uppercase"
+category = "behaviour"
+text = "make the verb upper case when it is a known one like get or post"
+targets = [{ path = "source/utils/normalize.ts", symbol = "normalizeRequestMethod" }]
+
+[[query]]
+id = "be-unknown-options-forwarded"
+category = "behaviour"
+text = "pass options this library does not recognise straight through to fetch"
+targets = [{ path = "source/utils/options.ts", symbol = "findUnknownOptions" }]
+
+[[query]]
+id = "be-response-too-big"
+category = "behaviour"
+text = "stop reading when the downloaded body grows past a byte cap"
+targets = [
+    { path = "source/utils/body.ts", symbol = "limitResponseSize" },
+    { path = "source/core/Ky.ts", symbol = "Ky.#limitResponseSize" },
+    { path = "source/errors/ResponseSizeError.ts", symbol = "ResponseSizeError" },
+]
+
+[[query]]
+id = "be-retry-limit-reached"
+category = "behaviour"
+text = "give up and rethrow once the maximum number of attempts is used"
+targets = [{ path = "source/core/Ky.ts", symbol = "Ky.#calculateRetryDelay" }]
+
+[[query]]
+id = "be-total-deadline"
+category = "behaviour"
+text = "one overall deadline across every attempt including the waits between them"
+targets = [
+    { path = "source/core/Ky.ts", symbol = "Ky.#getRemainingTotalTimeout" },
+    { path = "source/core/Ky.ts", symbol = "Ky.#throwIfTotalTimeoutExhausted" },
+    { path = "source/core/Ky.ts", symbol = "Ky.#raceWithTotalTimeout" },
+]
+
+[[query]]
+id = "be-custom-json-parser"
+category = "behaviour"
+text = "use the caller's own function to decode JSON instead of the built-in one"
+targets = [
+    { path = "source/core/Ky.ts", symbol = "Ky.#parseJson" },
+    { path = "source/core/Ky.ts", symbol = "Ky.#decorateResponse" },
+]
+
+[[query]]
+id = "be-form-field-escaping"
+category = "behaviour"
+text = "escape newlines and quotes in multipart field names"
+targets = [{ path = "source/utils/body.ts", symbol = "escapeFormDataName" }]
+
+# ---- docs --------------------------------------------------------------------------------------
+
+[[query]]
+id = "docs-baseurl-vs-prefix"
+category = "docs"
+text = "what is the difference between baseUrl and prefix"
+targets = [
+    { path = "readme.md", symbol = "FAQ > What's the difference between `baseUrl` and `prefix`?" },
+    { path = "readme.md", symbol = "API > ky.query(input, options?) > options > prefix" },
+    { path = "readme.md", symbol = "API > ky.query(input, options?) > options > baseUrl" },
+]
+
+[[query]]
+id = "docs-token-refresh"
+category = "docs"
+text = "refresh an expired access token when the server answers 401 and try again"
+targets = [{ path = "readme.md", symbol = "FAQ > How do I implement token refresh on 401 responses?" }]
+
+[[query]]
+id = "docs-proxy"
+category = "docs"
+text = "send requests through a corporate proxy in Node"
+targets = [{ path = "readme.md", symbol = "Tips > Proxy support (Node.js)" }]
+
+[[query]]
+id = "docs-cancel"
+category = "docs"
+text = "how to cancel a request that is in flight"
+targets = [{ path = "readme.md", symbol = "Tips > Cancellation" }]
+
+[[query]]
+id = "docs-auth-header-every-request"
+category = "docs"
+text = "attach a bearer token to all calls"
+targets = [
+    { path = "readme.md", symbol = "FAQ > How do I add authentication headers to every request?" },
+    { path = "readme.md", symbol = "API > ky.query(input, options?) > options > hooks > hooks.beforeRequest" },
+]
+
+[[query]]
+id = "docs-pagination"
+category = "docs"
+text = "fetch every page of a paginated API"
+targets = [{ path = "readme.md", symbol = "Tips > Pagination" }]
+
+[[query]]
+id = "docs-stop-retrying"
+category = "docs"
+text = "stop retrying early from a hook"
+targets = [
+    { path = "readme.md", symbol = "FAQ > How do I stop retrying early?" },
+    { path = "readme.md", symbol = "API > ky.stop" },
+]

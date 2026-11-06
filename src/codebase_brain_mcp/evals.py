@@ -19,6 +19,7 @@ from pathlib import Path
 
 from . import sources
 from .brain import SEARCH_MODES, Brain, SearchMode
+from .chunking import DEFINITION_KINDS
 from .store import StoredChunk
 
 CUTOFFS = (1, 3, 5, 10)
@@ -42,7 +43,9 @@ class Target:
             return False
         if self.symbol is None:
             return True
-        return chunk.symbol == self.symbol or (chunk.symbol or "").startswith(f"{self.symbol}.")
+        # A method belongs to its class ("Signer.sign"), a subsection to its section ("API > retry").
+        symbol = chunk.symbol or ""
+        return symbol == self.symbol or symbol.startswith((f"{self.symbol}.", f"{self.symbol} > "))
 
 
 @dataclass(frozen=True)
@@ -151,7 +154,7 @@ def validate_targets(brain: Brain, repo: str, dataset: Dataset) -> None:
     """Fail loudly if the dataset names files or symbols that aren't in the index (dataset rot)."""
     store = brain.store_for(repo)
     files = store.file_paths()
-    symbols = set(store.symbols())
+    symbols = set(store.symbols((*DEFINITION_KINDS, "section")))
     missing = []
     for query in dataset.queries:
         for target in query.targets:

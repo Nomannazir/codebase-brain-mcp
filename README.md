@@ -47,8 +47,10 @@ A plug-in for any AI assistant that turns a codebase into something it can actua
 
 ## Why it's different (technical)
 
-- **Code-aware chunking.** Python is split by function, class and method using the real syntax tree, Markdown by
-  heading. Each chunk knows its symbol (`TimestampSigner.unsign`) and exact lines, so citations point at real code.
+- **Code-aware chunking.** Python (with `ast`) and JavaScript / TypeScript / JSX / TSX (with tree-sitter) are split
+  by function, class, method, arrow function, interface, type and enum, with their doc comments. Markdown is split
+  by heading. Each chunk knows its symbol (`TimestampSigner.unsign`, `Ky.#retry`) and exact lines, so citations
+  point at real code. Other languages are indexed in overlapping line windows.
 - **Hybrid retrieval.** SQLite FTS5 BM25 (with `camelCase` / `snake_case` identifier splitting) plus local
   embeddings, merged with reciprocal-rank fusion. Exact names and fuzzy questions both work.
 - **Local and free.** Embeddings run on your machine (`fastembed`, ONNX). No API keys, and no code leaves your
@@ -59,7 +61,8 @@ A plug-in for any AI assistant that turns a codebase into something it can actua
   the current lines, and links the pull requests behind each change. So agents can answer *"why is it built this
   way?"*, not just *"what does it do?"*.
 - **Impact analysis.** `impact_of_change` lists everything that uses a function, directly and transitively, plus the
-  tests that exercise it, before an agent changes anything.
+  tests that exercise it, before an agent changes anything. It works across Python, JavaScript and TypeScript files,
+  and follows a constructor to the code that builds its class.
 - **Doc-drift detection.** `find_doc_drift` checks Markdown and reStructuredText docs against the code. It finds
   files, functions, settings and flags that don't exist; examples passing parameters a function doesn't take; imports
   that would fail; and sections last edited long before the code they describe changed. Each finding cites the doc
@@ -183,10 +186,14 @@ because they're supposed to mention removed things.
 ## Evaluation
 
 Does search actually put the right code in front of the model? `codebase-brain eval` answers that with a benchmark.
-The benchmark has 32 questions about [pallets/itsdangerous](https://github.com/pallets/itsdangerous), pinned to
-commit `672971d`, each with the code or docs a good answer must come from. The questions are in
-[`evals/datasets/itsdangerous.toml`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/datasets/itsdangerous.toml). They were written by reading the code
-before any results were measured, and haven't been changed since.
+There are two, each with 32 questions pinned to one commit, and each question lists the code or docs a good answer
+must come from. The questions were written by reading the code before any results were measured, and haven't been
+changed since.
+
+### Python: pallets/itsdangerous
+
+32 questions about [pallets/itsdangerous](https://github.com/pallets/itsdangerous) at commit `672971d`, in
+[`evals/datasets/itsdangerous.toml`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/datasets/itsdangerous.toml).
 
 | Mode | Hit@1 | Hit@3 | Hit@5 | Hit@10 | MRR@10 (95% CI) | nDCG@10 | p50 latency |
 |---|---|---|---|---|---|---|---|
@@ -210,10 +217,40 @@ before any results were measured, and haven't been changed since.
   the top 5. They're listed in [`evals/results/itsdangerous.md`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/results/itsdangerous.md) and are the next
   thing to improve. A larger, held-out question set will come first, so any tuning isn't fitted to these 32.
 
-Reproduce it (the first run downloads the repo and the embedding model):
+### TypeScript: sindresorhus/ky
+
+32 questions about [sindresorhus/ky](https://github.com/sindresorhus/ky) at commit `3541888`, in
+[`evals/datasets/ky.toml`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/datasets/ky.toml).
+The readme is one 2,000-line file, so docs questions must find the right *section*, not just the file.
+
+| Mode | Hit@1 | Hit@3 | Hit@5 | Hit@10 | MRR@10 (95% CI) | nDCG@10 | p50 latency |
+|---|---|---|---|---|---|---|---|
+| **hybrid** (default) | 47% | 66% | 69% | 78% | 0.563 (0.41–0.71) | 0.576 | 6 ms |
+| keyword only (BM25) | 38% | 44% | 53% | 62% | 0.436 (0.29–0.59) | 0.455 | 1 ms |
+| vector only (bge-small) | 47% | **69%** | **75%** | 78% | **0.594** (0.46–0.74) | **0.604** | 5 ms |
+
+| Hit@5 by question type | describes behaviour (14) | about the docs (7) | names the code (11) |
+|---|---|---|---|
+| hybrid | 36% | **100%** | 91% |
+| keyword only | 7% | 86% | 91% |
+| vector only | **43%** | **100%** | **100%** |
+
+**What this shows:**
+- **Naming the code or asking about the docs works well:** 91–100% in the top 5.
+- **Describing behaviour in plain words is the weak spot (36%).** ky has about 25,000 lines of tests next to
+  5,000 lines of source, and the tests describe the same behaviour in plain words, so they outrank the source.
+  Every miss is listed in [`evals/results/ky.md`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/results/ky.md).
+- **Hybrid is not better than vector-only here.** The intervals overlap heavily (hybrid beats vector on 5
+  questions and loses on 9), so neither is proven better. Keyword-only is clearly worst: hybrid beats it on 12
+  questions and loses on none.
+- These results are published as measured. Tuning (for example, ranking source above tests) will be checked
+  against a new held-out set, so it isn't fitted to these questions.
+
+Reproduce either benchmark (the first run downloads the repo and the embedding model):
 
 ```bash
 uv run codebase-brain eval evals/datasets/itsdangerous.toml --out evals/results
+uv run codebase-brain eval evals/datasets/ky.toml --out evals/results
 ```
 
 How it's measured:
@@ -229,7 +266,7 @@ How it's measured:
 
 ```
 source ─► resolve (local dir / shallow https clone) ─► list files (.gitignore-aware, skips binaries and lockfiles)
-       ─► chunk (ast / headings / line windows) ─► embed (fastembed) ─► SQLite: chunks + vectors + FTS5
+       ─► chunk (ast / tree-sitter / headings / windows) ─► embed (fastembed) ─► SQLite: chunks + vectors + FTS5
 query  ─► BM25 top 50 ┐
        ─► vector top 50 ┴─► reciprocal-rank fusion ─► filters ─► cited sources
 ```
@@ -259,9 +296,11 @@ uv run pyright          # types
 - [x] Git history and PR discussions: `explain_history`, `search_history`
 - [x] Symbol references and transitive dependents: `impact_of_change`
 - [x] `find_doc_drift`: Markdown and reStructuredText, signatures, imports, settings, flags, staleness
-- [ ] tree-sitter chunking for more languages
+- [x] JavaScript and TypeScript (tree-sitter): chunking, references, impact analysis
+- [ ] More languages (Go, Rust, Java) with tree-sitter
 - [x] Retrieval evals with confidence intervals (`codebase-brain eval`)
 - [ ] Larger held-out eval set, then retrieval tuning (reranking, query expansion)
 - [x] Streamable HTTP with bearer-token auth, Docker image
-- [ ] Hosted demo, PyPI package, MCP Registry listing
+- [x] PyPI package, MCP Registry listing
+- [ ] Hosted demo
 - [ ] OpenTelemetry tracing
