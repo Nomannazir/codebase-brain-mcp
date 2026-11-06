@@ -113,6 +113,34 @@ src/itsdangerous/timed.py:72-158
 claude mcp add project-brain -- uv run --directory /path/to/project-brain-mcp project-brain
 ```
 
+### Run it as a remote server (Streamable HTTP)
+
+```bash
+export PROJECT_BRAIN_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uv run project-brain serve --transport streamable-http --host 0.0.0.0 --port 8765
+```
+
+Clients connect to `http://<host>:8765/mcp` with `Authorization: Bearer <token>`. `GET /healthz` is open for load
+balancers. Remote mode is locked down by default:
+
+- **No token, no public port.** The server refuses to listen beyond localhost without a token of at least 24
+  characters. Tokens are compared in constant time.
+- **Remote clients can't read the server's disk.** Only public `https://` git URLs can be indexed, not local paths,
+  unless you set `PROJECT_BRAIN_ALLOW_LOCAL_PATHS=1`.
+- **Big repos are refused** above `PROJECT_BRAIN_MAX_FILES` (default 20,000), and every git command has a timeout.
+- **DNS-rebinding protection** is on for localhost, and for any hosts listed in `PROJECT_BRAIN_ALLOWED_HOSTS`.
+
+### Docker
+
+```bash
+docker build -t project-brain-mcp .
+docker run -p 8765:8765 -e PROJECT_BRAIN_TOKEN="$PROJECT_BRAIN_TOKEN" -v brain-data:/data project-brain-mcp
+```
+
+The image runs as a non-root user and includes the embedding model, so it starts fast and needs no download at
+runtime. It has a health check, and keeps indexes in the `/data` volume. Indexing uses about 1.2 GB of memory, so
+give the container 2 GB.
+
 ### Configuration
 
 | Variable | Default | |
@@ -123,6 +151,11 @@ claude mcp add project-brain -- uv run --directory /path/to/project-brain-mcp pr
 | `PROJECT_BRAIN_MAX_FILE_BYTES` | `512000` | Larger files are skipped |
 | `GITHUB_TOKEN` | unset | Optional. Raises GitHub's API rate limit for PR lookups |
 | `PROJECT_BRAIN_FETCH_PRS` | `1` | Set to `0` to never call the GitHub API |
+| `PROJECT_BRAIN_TOKEN` | unset | Bearer token for HTTP mode (required unless bound to localhost) |
+| `PROJECT_BRAIN_ALLOWED_HOSTS` | unset | Comma-separated `Host` values to accept (DNS-rebinding protection) |
+| `PROJECT_BRAIN_ALLOW_LOCAL_PATHS` | `1` (stdio) / `0` (HTTP) | Whether `index_repo` may read local directories |
+| `PROJECT_BRAIN_MAX_FILES` | `20000` | Refuse repos with more indexable files |
+| `PORT` | `8765` | HTTP port (platforms such as Cloud Run set this) |
 
 ### Doc drift, tested honestly
 
@@ -194,11 +227,13 @@ query  ─► BM25 top 50 ┐
 - `read_lines` resolves paths and refuses anything outside the indexed repository.
 - Repo names are validated, so they can't escape the index directory.
 - All query tools are marked read-only.
+- In HTTP mode: a required bearer token (constant-time check), git URLs only, repo size limits, DNS-rebinding
+  protection, and a non-root container.
 
 ## Development
 
 ```bash
-uv run pytest           # 45 tests, offline (hash embedder, temporary git repos, in-process MCP client)
+uv run pytest           # 54 tests, offline (hash embedder, temporary git repos, in-process MCP client)
 uv run ruff check .     # lint
 uv run ruff format .    # format
 uv run pyright          # types
@@ -212,4 +247,6 @@ uv run pyright          # types
 - [ ] tree-sitter chunking for more languages
 - [x] Retrieval evals with confidence intervals (`project-brain eval`)
 - [ ] Larger held-out eval set, then retrieval tuning (reranking, query expansion)
-- [ ] Streamable HTTP deployment with auth, and OpenTelemetry tracing
+- [x] Streamable HTTP with bearer-token auth, Docker image
+- [ ] Hosted demo, PyPI package, MCP Registry listing
+- [ ] OpenTelemetry tracing

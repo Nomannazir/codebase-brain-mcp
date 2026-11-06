@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ def main(argv: list[str] | None = None) -> int:
     serve = commands.add_parser("serve", help="Run the MCP server (the default).")
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8765)
+    serve.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8765")))
     index = commands.add_parser("index", help="Index a local path or an https git URL.")
     index.add_argument("source")
     index.add_argument("--name")
@@ -38,11 +39,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in (None, "serve"):
         from .server import build_server
 
-        server = build_server()
         if getattr(args, "transport", "stdio") == "streamable-http":
-            server.run("streamable-http", host=args.host, port=args.port)
-        else:
-            server.run("stdio")
+            return _serve_http(args)
+        build_server().run("stdio")
         return 0
 
     brain = Brain(load_settings())
@@ -62,6 +61,29 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         brain.close()
+    return 0
+
+
+def _serve_http(args: argparse.Namespace) -> int:
+    import dataclasses
+    import os
+
+    from .remote import RemoteConfig, RemoteConfigError, serve
+    from .server import build_server
+
+    settings = load_settings()
+    if os.environ.get("PROJECT_BRAIN_ALLOW_LOCAL_PATHS") != "1":
+        settings = dataclasses.replace(settings, allow_local_paths=False)  # remote clients: git URLs only
+    hosts = tuple(h.strip() for h in os.environ.get("PROJECT_BRAIN_ALLOWED_HOSTS", "").split(",") if h.strip())
+    config = RemoteConfig(
+        host=args.host, port=args.port, token=os.environ.get("PROJECT_BRAIN_TOKEN") or None, allowed_hosts=hosts
+    )
+    try:
+        config.validate()
+    except RemoteConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    serve(build_server(Brain(settings)), config)
     return 0
 
 

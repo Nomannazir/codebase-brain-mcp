@@ -98,8 +98,14 @@ class Brain:
         """Index (or re-index) a local directory or an https git URL. Unchanged files are skipped."""
         started = time.monotonic()
         name = self._valid_name(name or sources.default_name(source))
+        if not self.settings.allow_local_paths and not sources.is_url(source):
+            raise BrainError("This server only indexes public https git URLs, not local paths.")
         root = sources.resolve(source, self.settings.clone_dir)
         files = sources.iter_files(root, self.settings.max_file_bytes)
+        if len(files) > self.settings.max_files:
+            raise BrainError(
+                f"{source} has {len(files)} indexable files, over this server's limit of {self.settings.max_files}."
+            )
         store = self._store(name)
 
         meta = store.get_meta()
