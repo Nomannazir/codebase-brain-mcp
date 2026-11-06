@@ -1,7 +1,8 @@
 """Split files into chunks that follow the code's own structure.
 
-Python is split by function and class (with exact line numbers, from ``ast``), Markdown by heading,
-and everything else into overlapping line windows. Chunks that are still too long are windowed
+Python is split by function and class (with exact line numbers, from ``ast``), JavaScript and
+TypeScript the same way (with tree-sitter), Markdown by heading, and everything else into overlapping
+line windows. Chunks that are still too long are windowed
 again but keep their symbol, so a citation always says which function it came from.
 """
 
@@ -12,11 +13,16 @@ import builtins
 import re
 from dataclasses import dataclass, replace
 
+from . import chunking_js
+
 WINDOW_LINES = 60
 WINDOW_OVERLAP = 10
 MAX_CHUNK_LINES = 120
 _HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 _IGNORED_NAMES = set(dir(builtins)) | {"self", "cls", "super", "typing", "t", "_"}
+DEFINITION_KINDS = ("function", "method", "class", "interface", "type", "enum")
+"""Chunk kinds that define a named thing other code can use."""
+Signatures = dict[int, tuple[tuple[str, ...], bool]]
 
 
 @dataclass(frozen=True)
@@ -27,11 +33,11 @@ class Chunk:
     end_line: int
     """1-based, inclusive."""
     kind: str
-    """function, class, method, module, section, or code."""
+    """function, class, method, interface, type, enum, module, section, or code."""
     symbol: str | None
     text: str
     refs: tuple[str, ...] = ()
-    """Names this chunk uses: calls, attributes and imports (Python only). Feeds impact_of_change."""
+    """Names this chunk uses: calls, attributes and imports (Python, JS and TS). Feeds impact_of_change."""
     params: tuple[str, ...] | None = None
     """Parameter names when the chunk is a function or method; None otherwise. Feeds find_doc_drift."""
     accepts_any_keyword: bool = False
@@ -52,7 +58,9 @@ def chunk_file(path: str, language: str, text: str) -> list[Chunk]:
         except (SyntaxError, ValueError):
             return _windows(path, lines, 1, len(lines), "code", None)
         chunks = [piece for chunk in _python_chunks(path, lines, tree) for piece in _split_long(chunk, lines)]
-        return _with_python_facts(chunks, tree)
+        return _with_facts(chunks, *_python_facts(tree))
+    if language in ("javascript", "typescript"):
+        return _js_chunks(path, language, lines, text)
     if language == "markdown":
         chunks = _markdown_chunks(path, lines)
     else:
@@ -72,7 +80,22 @@ def _python_chunks(path: str, lines: list[str], tree: ast.Module) -> list[Chunk]
             chunks.extend(_class_chunks(path, lines, node, start, end))
         else:
             chunks.append(_make(path, lines, start, end, "function", node.name))
-    # Whatever sits between definitions (imports, constants, module docstring) is one "module" chunk each.
+    return _with_module_gaps(path, lines, chunks, covered)
+
+
+def _js_chunks(path: str, language: str, lines: list[str], text: str) -> list[Chunk]:
+    found = chunking_js.outline(path, language, text, MAX_CHUNK_LINES)
+    if found is None:
+        return _windows(path, lines, 1, len(lines), "code", None)
+    chunks = [_make(path, lines, d.start_line, d.end_line, d.kind, d.symbol) for d in found.definitions]
+    chunks = _with_module_gaps(path, lines, chunks, found.covered)
+    pieces = [piece for chunk in chunks for piece in _split_long(chunk, lines)]
+    return _with_facts(pieces, found.uses, found.signatures, chunking_js.IGNORED_NAMES)
+
+
+def _with_module_gaps(path: str, lines: list[str], chunks: list[Chunk], covered: list[tuple[int, int]]) -> list[Chunk]:
+    """Whatever sits between definitions (imports, constants, module docstring) is one "module" chunk each."""
+    result = list(chunks)
     cursor = 1
     for start, end in [*sorted(covered), (len(lines) + 1, len(lines) + 1)]:
         gap_start, gap_end = cursor, start - 1
@@ -81,15 +104,15 @@ def _python_chunks(path: str, lines: list[str], tree: ast.Module) -> list[Chunk]
         while gap_end >= gap_start and not lines[gap_end - 1].strip():
             gap_end -= 1
         if gap_start <= gap_end:
-            chunks.append(_make(path, lines, gap_start, gap_end, "module", None))
+            result.append(_make(path, lines, gap_start, gap_end, "module", None))
         cursor = max(cursor, end + 1)
-    return sorted(chunks, key=lambda c: c.start_line)
+    return sorted(result, key=lambda c: c.start_line)
 
 
-def _with_python_facts(chunks: list[Chunk], tree: ast.Module) -> list[Chunk]:
-    """Attach the names each chunk uses, and the parameters of each function chunk."""
+def _python_facts(tree: ast.Module) -> tuple[list[tuple[int, str]], Signatures, set[str]]:
+    """The names used on each line, and each function's parameters keyed by its first line."""
     uses: list[tuple[int, str]] = []
-    signatures: dict[int, tuple[tuple[str, ...], bool]] = {}
+    signatures: Signatures = {}
     for node in ast.walk(tree):
         if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
             uses.append((node.lineno, node.id))
@@ -105,6 +128,13 @@ def _with_python_facts(chunks: list[Chunk], tree: ast.Module) -> list[Chunk]:
             args = node.args
             names = [a.arg for a in (*args.posonlyargs, *args.args, *args.kwonlyargs)]
             signatures[_span(node)[0]] = (tuple(n for n in names if n not in ("self", "cls")), args.kwarg is not None)
+    return uses, signatures, _IGNORED_NAMES
+
+
+def _with_facts(
+    chunks: list[Chunk], uses: list[tuple[int, str]], signatures: Signatures, ignored: set[str]
+) -> list[Chunk]:
+    """Attach the names each chunk uses, and the parameters of each function chunk."""
     result = []
     for chunk in chunks:
         own = chunk.symbol.rsplit(".", 1)[-1] if chunk.symbol else None
@@ -112,10 +142,7 @@ def _with_python_facts(chunks: list[Chunk], tree: ast.Module) -> list[Chunk]:
             {
                 name
                 for line, name in uses
-                if chunk.start_line <= line <= chunk.end_line
-                and name not in _IGNORED_NAMES
-                and name != own
-                and len(name) > 2
+                if chunk.start_line <= line <= chunk.end_line and name not in ignored and name != own and len(name) > 1
             }
         )
         signature = signatures.get(chunk.start_line) if chunk.kind in ("function", "method") else None

@@ -13,10 +13,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import history
+from .chunking import DEFINITION_KINDS
 from .sources import SourceError
 from .store import Store, StoredChunk
 
 MAX_PER_LEVEL = 60
+STRUCTURED_SUFFIXES = (".py", ".pyi", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx")
 STALE_AFTER = timedelta(days=180)
 MAX_STALENESS_CHECKS = 40
 _FENCE = re.compile(r"^(`{3,}|~{3,})\s*([\w+-]*)[^\n]*\n(.*?)^\1\s*$", re.MULTILINE | re.DOTALL)
@@ -31,7 +33,7 @@ _PATH = re.compile(r"^\.?/?[\w.-]+(/[\w.-]+)+/?$")
 _ENV = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")
 _FLAG = re.compile(r"^(--[a-z][a-z0-9-]+)(=\S*)?$")
 _SYMBOL = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*(\(\))?$")
-_TEST_PATH = re.compile(r"(^|/)(tests?|testing)/|(^|/)test_[^/]+$|_test\.\w+$")
+_TEST_PATH = re.compile(r"(^|/)(tests?|testing|__tests__)/|(^|/)test_[^/]+$|_test\.\w+$|\.(test|spec)\.[jt]sx?$")
 _COMMON = set(dir(builtins)) | set(keyword.kwlist) | {"true", "false", "null", "none", "self", "cls"}
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 _CHANGELOG = re.compile(
@@ -57,6 +59,8 @@ def definition_span(matches: list[StoredChunk]) -> tuple[str, int, int, str | No
 
 # ---- impact_of_change -------------------------------------------------------------------------
 
+_CONSTRUCTORS = {"__init__", "__new__", "constructor"}
+
 
 @dataclass(frozen=True)
 class Dependent:
@@ -79,13 +83,21 @@ class ImpactReport:
     notes: list[str] = field(default_factory=list)
 
 
+def _used_as(symbol: str) -> str:
+    """The name other code uses to reach ``symbol``: a constructor is reached through its class."""
+    owner, _, short = symbol.rpartition(".")
+    if short in _CONSTRUCTORS and owner:
+        return owner.rsplit(".", 1)[-1]
+    return short
+
+
 def impact_of_change(store: Store, target: StoredChunk, span: tuple[int, int], depth: int = 2) -> ImpactReport:
     """Everything that uses ``target`` by name, directly and (up to ``depth``) transitively."""
     symbol = target.symbol or ""
     short = symbol.rsplit(".", 1)[-1]
     excluded = {c.id for c in store.find_symbol(symbol, target.path)}
     dependents: list[Dependent] = []
-    frontier = [short]
+    frontier = [_used_as(symbol)]
     for level in range(1, max(1, min(depth, 3)) + 1):
         next_frontier: list[str] = []
         for name in frontier:
@@ -97,8 +109,8 @@ def impact_of_change(store: Store, target: StoredChunk, span: tuple[int, int], d
                 dependents.append(
                     Dependent(chunk=chunk, via=name, level=level, is_test=bool(_TEST_PATH.search(chunk.path)))
                 )
-                if chunk.symbol and chunk.kind in ("function", "method", "class"):
-                    next_frontier.append(chunk.symbol.rsplit(".", 1)[-1])
+                if chunk.symbol and chunk.kind in DEFINITION_KINDS:
+                    next_frontier.append(_used_as(chunk.symbol))
         frontier = list(dict.fromkeys(next_frontier))
         if not frontier:
             break
@@ -114,8 +126,8 @@ def impact_of_change(store: Store, target: StoredChunk, span: tuple[int, int], d
             f"{len(twins)} other definition(s) share the name {short!r}; some dependents may use those "
             "instead. Check the import or receiver before changing anything."
         )
-    if not target.path.endswith((".py", ".pyi")):
-        notes.append("Only Python is analysed structurally; for other languages, also run search for the name.")
+    if not target.path.endswith(STRUCTURED_SUFFIXES):
+        notes.append("Only Python, JS and TS are analysed structurally; for other languages, also search the name.")
     notes.append("Found by name, so dynamic calls (getattr, string dispatch, callbacks) aren't included.")
     return ImpactReport(
         symbol=symbol,

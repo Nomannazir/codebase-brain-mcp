@@ -6,12 +6,13 @@ import json
 import re
 import sqlite3
 import threading
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
-from .chunking import Chunk
+from .chunking import DEFINITION_KINDS, Chunk
 from .history import Commit, PullRequest
 
 SCHEMA = """
@@ -46,7 +47,7 @@ CREATE TABLE IF NOT EXISTS commits (
 CREATE VIRTUAL TABLE IF NOT EXISTS commits_fts USING fts5 (subject, body, sha UNINDEXED, tokenize = 'porter unicode61');
 CREATE TABLE IF NOT EXISTS pull_requests (number INTEGER PRIMARY KEY, data TEXT NOT NULL);
 """
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 """Bump when the index layout changes; older indexes are rebuilt automatically."""
 _WORD = re.compile(r"[A-Za-z0-9_]+")
 _CAMEL = re.compile(r"[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+")
@@ -221,19 +222,22 @@ class Store:
         )
         return [StoredChunk(**dict(row)) for row in rows]
 
-    def symbols(self) -> list[tuple[str, str]]:
-        """Every defined (symbol, path) pair."""
+    def symbols(self, kinds: Sequence[str] = DEFINITION_KINDS) -> list[tuple[str, str]]:
+        """Every (symbol, path) pair of the given chunk kinds; by default, everything code defines."""
+        marks = ", ".join("?" * len(kinds))
         rows = self._db.execute(
-            "SELECT DISTINCT symbol, path FROM chunks WHERE symbol IS NOT NULL"
-            " AND kind IN ('function', 'class', 'method')"
+            f"SELECT DISTINCT symbol, path FROM chunks WHERE symbol IS NOT NULL AND kind IN ({marks})",  # noqa: S608 (only "?" placeholders)
+            tuple(kinds),
         )
         return [(row["symbol"], row["path"]) for row in rows]
 
     def signatures(self, short_name: str) -> list[tuple[str, str, list[str], bool]]:
-        """(symbol, path, params, accepts_any_keyword) for functions named ``short_name``."""
+        """(symbol, path, params, accepts_any_keyword) for Python functions named ``short_name``.
+
+        Python only, because the docs' code examples that drift checks against them are Python."""
         rows = self._db.execute(
-            "SELECT symbol, path, params, accepts_any_keyword FROM chunks WHERE params IS NOT NULL"
-            " AND (symbol = ? OR symbol GLOB ?)",
+            "SELECT c.symbol, c.path, c.params, c.accepts_any_keyword FROM chunks c JOIN files f ON f.path = c.path"
+            " WHERE c.params IS NOT NULL AND f.language = 'python' AND (c.symbol = ? OR c.symbol GLOB ?)",
             (short_name, f"*.{_glob_literal(short_name)}"),
         )
         return [(r["symbol"], r["path"], json.loads(r["params"]), bool(r["accepts_any_keyword"])) for r in rows]

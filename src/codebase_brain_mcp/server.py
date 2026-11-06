@@ -187,7 +187,7 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         query: str, repo: str | None = None, k: int = 8, path_prefix: str | None = None, kinds: list[str] | None = None
     ) -> SearchResult:
         """Hybrid search (BM25 keywords + embeddings, fused by rank). Filter by `path_prefix`
-        (e.g. "src/auth/") or `kinds` (function, class, method, module, section, code)."""
+        (e.g. "src/auth/") or `kinds` (function, class, method, interface, type, enum, module, section, code)."""
         hits = await _search(brain, query, repo, k, path_prefix, kinds)
         return SearchResult(repo=brain.resolve_repo(repo), query=query, results=[_source(h) for h in hits])
 
@@ -232,7 +232,7 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         symbol: str, repo: str | None = None, path: str | None = None, depth: int = 2
     ) -> ImpactResult:
         """What breaks if `symbol` changes: code that uses it directly, code that uses that code
-        (up to `depth`, max 3), and the tests involved. Python is analysed structurally."""
+        (up to `depth`, max 3), and the tests involved. Python, JavaScript and TypeScript are analysed structurally."""
         report = await _call(lambda: brain.impact_of_change(repo, symbol, path, depth))
         return _impact(report)
 
