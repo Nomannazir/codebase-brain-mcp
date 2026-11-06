@@ -18,6 +18,10 @@ RUN /app/.venv/bin/python -c "from fastembed import TextEmbedding; TextEmbedding
 
 # ---- runtime: small image, non-root user ------------------------------------------------------
 FROM python:3.12-slim
+LABEL io.modelcontextprotocol.server.name="io.github.Nomannazir/codebase-brain-mcp" \
+      org.opencontainers.image.source="https://github.com/Nomannazir/codebase-brain-mcp" \
+      org.opencontainers.image.description="MCP server: a cited, searchable memory of a codebase" \
+      org.opencontainers.image.licenses="MIT"
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/* \
@@ -29,7 +33,7 @@ COPY --from=build /models /models
 ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     FASTEMBED_CACHE_PATH=/models \
-    PROJECT_BRAIN_HOME=/data \
+    CODEBASE_BRAIN_HOME=/data \
     PORT=8765
 
 USER brain
@@ -38,5 +42,5 @@ EXPOSE 8765
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
     CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/healthz', timeout=3)"
 
-# PROJECT_BRAIN_TOKEN must be set at run time; the server refuses to start publicly without it.
-CMD ["sh", "-c", "exec project-brain serve --transport streamable-http --host 0.0.0.0 --port \"$PORT\""]
+# CODEBASE_BRAIN_TOKEN must be set at run time; the server refuses to start publicly without it.
+CMD ["sh", "-c", "exec codebase-brain serve --transport streamable-http --host 0.0.0.0 --port \"$PORT\""]

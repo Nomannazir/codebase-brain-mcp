@@ -45,14 +45,14 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    home = Path(os.environ.get("PROJECT_BRAIN_HOME", Path.home() / ".project-brain")).expanduser()
+    home = Path(os.environ.get("CODEBASE_BRAIN_HOME", Path.home() / ".codebase-brain")).expanduser()
     return Settings(
         home=home,
-        embedder=os.environ.get("PROJECT_BRAIN_EMBEDDER", "fastembed"),
-        embed_model=os.environ.get("PROJECT_BRAIN_EMBED_MODEL", DEFAULT_EMBED_MODEL),
-        max_file_bytes=int(os.environ.get("PROJECT_BRAIN_MAX_FILE_BYTES", DEFAULT_MAX_FILE_BYTES)),
+        embedder=os.environ.get("CODEBASE_BRAIN_EMBEDDER", "fastembed"),
+        embed_model=os.environ.get("CODEBASE_BRAIN_EMBED_MODEL", DEFAULT_EMBED_MODEL),
+        max_file_bytes=int(os.environ.get("CODEBASE_BRAIN_MAX_FILE_BYTES", DEFAULT_MAX_FILE_BYTES)),
         github_token=os.environ.get("GITHUB_TOKEN") or None,
-        fetch_pull_requests=os.environ.get("PROJECT_BRAIN_FETCH_PRS", "1") != "0",
-        allow_local_paths=os.environ.get("PROJECT_BRAIN_ALLOW_LOCAL_PATHS", "1") != "0",
-        max_files=int(os.environ.get("PROJECT_BRAIN_MAX_FILES", DEFAULT_MAX_FILES)),
+        fetch_pull_requests=os.environ.get("CODEBASE_BRAIN_FETCH_PRS", "1") != "0",
+        allow_local_paths=os.environ.get("CODEBASE_BRAIN_ALLOW_LOCAL_PATHS", "1") != "0",
+        max_files=int(os.environ.get("CODEBASE_BRAIN_MAX_FILES", DEFAULT_MAX_FILES)),
     )

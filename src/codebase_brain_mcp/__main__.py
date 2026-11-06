@@ -14,7 +14,7 @@ from .sources import SourceError
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="project-brain", description="Project Brain MCP server.")
+    parser = argparse.ArgumentParser(prog="codebase-brain", description="Codebase Brain MCP server.")
     commands = parser.add_subparsers(dest="command")
     serve = commands.add_parser("serve", help="Run the MCP server (the default).")
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
@@ -72,11 +72,11 @@ def _serve_http(args: argparse.Namespace) -> int:
     from .server import build_server
 
     settings = load_settings()
-    if os.environ.get("PROJECT_BRAIN_ALLOW_LOCAL_PATHS") != "1":
+    if os.environ.get("CODEBASE_BRAIN_ALLOW_LOCAL_PATHS") != "1":
         settings = dataclasses.replace(settings, allow_local_paths=False)  # remote clients: git URLs only
-    hosts = tuple(h.strip() for h in os.environ.get("PROJECT_BRAIN_ALLOWED_HOSTS", "").split(",") if h.strip())
+    hosts = tuple(h.strip() for h in os.environ.get("CODEBASE_BRAIN_ALLOWED_HOSTS", "").split(",") if h.strip())
     config = RemoteConfig(
-        host=args.host, port=args.port, token=os.environ.get("PROJECT_BRAIN_TOKEN") or None, allowed_hosts=hosts
+        host=args.host, port=args.port, token=os.environ.get("CODEBASE_BRAIN_TOKEN") or None, allowed_hosts=hosts
     )
     try:
         config.validate()

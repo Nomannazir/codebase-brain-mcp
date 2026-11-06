@@ -164,7 +164,7 @@ def fetch_pull_request(slug: str, number: int, token: str | None) -> PullRequest
     url = f"https://github.com/{slug}/pull/{number}"
     request = urllib.request.Request(
         f"https://api.github.com/repos/{slug}/pulls/{number}",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "project-brain-mcp"},
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "codebase-brain-mcp"},
     )
     if token:
         request.add_header("Authorization", f"Bearer {token}")

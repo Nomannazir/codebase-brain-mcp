@@ -10,6 +10,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
+from . import __version__
 from .analysis import DriftReport, ImpactReport
 from .brain import Brain, BrainError, HistoryReport, Hit
 from .config import load_settings
@@ -17,7 +18,7 @@ from .history import Commit
 from .sources import SourceError
 
 INSTRUCTIONS = """\
-Project Brain indexes code repositories and answers questions about them with citations.
+Codebase Brain indexes code repositories and answers questions about them with citations.
 Start with index_repo (a local path or an https git URL). Then use ask_codebase for questions,
 search for raw hybrid search, and read_lines to open the exact lines a citation points at.
 For "why is it like this?" questions, use explain_history on a symbol or line range, and
@@ -161,7 +162,7 @@ class RepoSummary(BaseModel):
 
 def build_server(brain: Brain | None = None) -> MCPServer:
     brain = brain or Brain(load_settings())
-    server = MCPServer("project-brain", instructions=INSTRUCTIONS, version="0.1.0")
+    server = MCPServer("codebase-brain", instructions=INSTRUCTIONS, version=__version__)
 
     @server.tool(
         annotations=ToolAnnotations(

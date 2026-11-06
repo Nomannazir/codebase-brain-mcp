@@ -1,17 +1,19 @@
-# Project Brain MCP
+# Codebase Brain MCP
 
-[![CI](https://github.com/Nomannazir/project-brain-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Nomannazir/project-brain-mcp/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<!-- mcp-name: io.github.Nomannazir/codebase-brain-mcp -->
+
+[![CI](https://github.com/Nomannazir/codebase-brain-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Nomannazir/codebase-brain-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/LICENSE)
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
 
 An [MCP](https://modelcontextprotocol.io) server that gives AI assistants a **cited, searchable memory of a
 codebase**, including its history. Point it at a local folder or a public git URL. Claude, Cursor or any MCP client
 can then answer questions about the code with exact `path:start-end` citations.
 
-![Claude Code using Project Brain to explain the history, impact and docs of a function](assets/demo.gif)
+![Claude Code using Codebase Brain to explain the history, impact and docs of a function](https://raw.githubusercontent.com/Nomannazir/codebase-brain-mcp/main/assets/demo.gif)
 
 *Claude Code asks why `TimestampSigner.unsign` looks the way it does, what breaks if it changes, and whether its
-docs are current. Project Brain answers with commits, callers, tests and doc findings, all cited. (Waiting time
+docs are current. Codebase Brain answers with commits, callers, tests and doc findings, all cited. (Waiting time
 sped up.)*
 
 ## The problem
@@ -28,7 +30,7 @@ AI coding assistants are good at writing new code but struggle to understand cod
 - **They don't know what a change will break,** or whether the documentation still matches the code.
 - **Many tools send your code to someone else's server** to make it searchable.
 
-## What Project Brain gives you
+## What Codebase Brain gives you
 
 A plug-in for any AI assistant that turns a codebase into something it can actually look things up in:
 
@@ -81,12 +83,25 @@ A plug-in for any AI assistant that turns a codebase into something it can actua
 
 Also included: the resource `brain://repos`, and the prompt `answer_with_citations`.
 
+## Install
+
+Codebase Brain runs on your own machine, so there's no server or account, and it's free. With
+[uv](https://docs.astral.sh/uv/):
+
+```bash
+# Claude Code
+claude mcp add codebase-brain -- uvx codebase-brain-mcp
+
+# Any MCP client (Claude Desktop, Cursor, ...): add this server to its config
+{ "command": "uvx", "args": ["codebase-brain-mcp"] }
+```
+
 ## Quick start
 
 ```bash
 uv sync
-uv run project-brain index https://github.com/pallets/itsdangerous
-uv run project-brain search "how is the signature timestamp checked for expiry"
+uv run codebase-brain index https://github.com/pallets/itsdangerous
+uv run codebase-brain search "how is the signature timestamp checked for expiry"
 ```
 
 ```
@@ -110,14 +125,14 @@ src/itsdangerous/timed.py:72-158
 ### Use it from Claude Code
 
 ```bash
-claude mcp add project-brain -- uv run --directory /path/to/project-brain-mcp project-brain
+claude mcp add codebase-brain -- uv run --directory /path/to/codebase-brain-mcp codebase-brain
 ```
 
 ### Run it as a remote server (Streamable HTTP)
 
 ```bash
-export PROJECT_BRAIN_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-uv run project-brain serve --transport streamable-http --host 0.0.0.0 --port 8765
+export CODEBASE_BRAIN_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uv run codebase-brain serve --transport streamable-http --host 0.0.0.0 --port 8765
 ```
 
 Clients connect to `http://<host>:8765/mcp` with `Authorization: Bearer <token>`. `GET /healthz` is open for load
@@ -126,15 +141,15 @@ balancers. Remote mode is locked down by default:
 - **No token, no public port.** The server refuses to listen beyond localhost without a token of at least 24
   characters. Tokens are compared in constant time.
 - **Remote clients can't read the server's disk.** Only public `https://` git URLs can be indexed, not local paths,
-  unless you set `PROJECT_BRAIN_ALLOW_LOCAL_PATHS=1`.
-- **Big repos are refused** above `PROJECT_BRAIN_MAX_FILES` (default 20,000), and every git command has a timeout.
-- **DNS-rebinding protection** is on for localhost, and for any hosts listed in `PROJECT_BRAIN_ALLOWED_HOSTS`.
+  unless you set `CODEBASE_BRAIN_ALLOW_LOCAL_PATHS=1`.
+- **Big repos are refused** above `CODEBASE_BRAIN_MAX_FILES` (default 20,000), and every git command has a timeout.
+- **DNS-rebinding protection** is on for localhost, and for any hosts listed in `CODEBASE_BRAIN_ALLOWED_HOSTS`.
 
 ### Docker
 
 ```bash
-docker build -t project-brain-mcp .
-docker run -p 8765:8765 -e PROJECT_BRAIN_TOKEN="$PROJECT_BRAIN_TOKEN" -v brain-data:/data project-brain-mcp
+docker build -t codebase-brain-mcp .
+docker run -p 8765:8765 -e CODEBASE_BRAIN_TOKEN="$CODEBASE_BRAIN_TOKEN" -v brain-data:/data codebase-brain-mcp
 ```
 
 The image runs as a non-root user and includes the embedding model, so it starts fast and needs no download at
@@ -145,16 +160,16 @@ give the container 2 GB.
 
 | Variable | Default | |
 |---|---|---|
-| `PROJECT_BRAIN_HOME` | `~/.project-brain` | Indexes and clones |
-| `PROJECT_BRAIN_EMBEDDER` | `fastembed` | `hash` gives an offline, deterministic embedder (used in tests) |
-| `PROJECT_BRAIN_EMBED_MODEL` | `BAAI/bge-small-en-v1.5` | Any fastembed text model |
-| `PROJECT_BRAIN_MAX_FILE_BYTES` | `512000` | Larger files are skipped |
+| `CODEBASE_BRAIN_HOME` | `~/.codebase-brain` | Indexes and clones |
+| `CODEBASE_BRAIN_EMBEDDER` | `fastembed` | `hash` gives an offline, deterministic embedder (used in tests) |
+| `CODEBASE_BRAIN_EMBED_MODEL` | `BAAI/bge-small-en-v1.5` | Any fastembed text model |
+| `CODEBASE_BRAIN_MAX_FILE_BYTES` | `512000` | Larger files are skipped |
 | `GITHUB_TOKEN` | unset | Optional. Raises GitHub's API rate limit for PR lookups |
-| `PROJECT_BRAIN_FETCH_PRS` | `1` | Set to `0` to never call the GitHub API |
-| `PROJECT_BRAIN_TOKEN` | unset | Bearer token for HTTP mode (required unless bound to localhost) |
-| `PROJECT_BRAIN_ALLOWED_HOSTS` | unset | Comma-separated `Host` values to accept (DNS-rebinding protection) |
-| `PROJECT_BRAIN_ALLOW_LOCAL_PATHS` | `1` (stdio) / `0` (HTTP) | Whether `index_repo` may read local directories |
-| `PROJECT_BRAIN_MAX_FILES` | `20000` | Refuse repos with more indexable files |
+| `CODEBASE_BRAIN_FETCH_PRS` | `1` | Set to `0` to never call the GitHub API |
+| `CODEBASE_BRAIN_TOKEN` | unset | Bearer token for HTTP mode (required unless bound to localhost) |
+| `CODEBASE_BRAIN_ALLOWED_HOSTS` | unset | Comma-separated `Host` values to accept (DNS-rebinding protection) |
+| `CODEBASE_BRAIN_ALLOW_LOCAL_PATHS` | `1` (stdio) / `0` (HTTP) | Whether `index_repo` may read local directories |
+| `CODEBASE_BRAIN_MAX_FILES` | `20000` | Refuse repos with more indexable files |
 | `PORT` | `8765` | HTTP port (platforms such as Cloud Run set this) |
 
 ### Doc drift, tested honestly
@@ -167,10 +182,10 @@ because they're supposed to mention removed things.
 
 ## Evaluation
 
-Does search actually put the right code in front of the model? `project-brain eval` answers that with a benchmark.
+Does search actually put the right code in front of the model? `codebase-brain eval` answers that with a benchmark.
 The benchmark has 32 questions about [pallets/itsdangerous](https://github.com/pallets/itsdangerous), pinned to
 commit `672971d`, each with the code or docs a good answer must come from. The questions are in
-[`evals/datasets/itsdangerous.toml`](evals/datasets/itsdangerous.toml). They were written by reading the code
+[`evals/datasets/itsdangerous.toml`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/datasets/itsdangerous.toml). They were written by reading the code
 before any results were measured, and haven't been changed since.
 
 | Mode | Hit@1 | Hit@3 | Hit@5 | Hit@10 | MRR@10 (95% CI) | nDCG@10 | p50 latency |
@@ -192,13 +207,13 @@ before any results were measured, and haven't been changed since.
 - **It's honest about uncertainty.** With 32 questions, the confidence intervals for MRR overlap, so hybrid is better
   *on this set* but not yet proven in general. Per question, hybrid beats keyword-only on 8 questions and loses on 4.
 - **It has known misses.** Four questions describing behaviour in very different words from the code don't reach
-  the top 5. They're listed in [`evals/results/itsdangerous.md`](evals/results/itsdangerous.md) and are the next
+  the top 5. They're listed in [`evals/results/itsdangerous.md`](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/evals/results/itsdangerous.md) and are the next
   thing to improve. A larger, held-out question set will come first, so any tuning isn't fitted to these 32.
 
 Reproduce it (the first run downloads the repo and the embedding model):
 
 ```bash
-uv run project-brain eval evals/datasets/itsdangerous.toml --out evals/results
+uv run codebase-brain eval evals/datasets/itsdangerous.toml --out evals/results
 ```
 
 How it's measured:
@@ -245,7 +260,7 @@ uv run pyright          # types
 - [x] Symbol references and transitive dependents: `impact_of_change`
 - [x] `find_doc_drift`: Markdown and reStructuredText, signatures, imports, settings, flags, staleness
 - [ ] tree-sitter chunking for more languages
-- [x] Retrieval evals with confidence intervals (`project-brain eval`)
+- [x] Retrieval evals with confidence intervals (`codebase-brain eval`)
 - [ ] Larger held-out eval set, then retrieval tuning (reranking, query expansion)
 - [x] Streamable HTTP with bearer-token auth, Docker image
 - [ ] Hosted demo, PyPI package, MCP Registry listing

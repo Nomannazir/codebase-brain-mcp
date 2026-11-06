@@ -1,6 +1,6 @@
 import textwrap
 
-from project_brain_mcp.chunking import MAX_CHUNK_LINES, chunk_file
+from codebase_brain_mcp.chunking import MAX_CHUNK_LINES, chunk_file
 
 
 def test_python_is_split_by_definition_with_exact_lines():

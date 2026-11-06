@@ -71,7 +71,7 @@ def make_embedder(settings: Settings) -> Embedder:
         return HashEmbedder()
     if settings.embedder == "fastembed":
         return FastEmbedEmbedder(settings.embed_model)
-    raise ValueError(f"Unknown PROJECT_BRAIN_EMBEDDER {settings.embedder!r}; use 'fastembed' or 'hash'.")
+    raise ValueError(f"Unknown CODEBASE_BRAIN_EMBEDDER {settings.embedder!r}; use 'fastembed' or 'hash'.")
 
 
 def _normalise(matrix: np.ndarray) -> np.ndarray:

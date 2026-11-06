@@ -42,12 +42,12 @@ class RemoteConfig:
         """Refuse to expose the server beyond this machine without a strong token."""
         if self.token is not None and len(self.token) < MIN_TOKEN_LENGTH:
             raise RemoteConfigError(
-                f"PROJECT_BRAIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters; "
+                f"CODEBASE_BRAIN_TOKEN must be at least {MIN_TOKEN_LENGTH} characters; "
                 'generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
             )
         if not self.is_loopback and not self.token:
             raise RemoteConfigError(
-                f"Refusing to listen on {self.host} without PROJECT_BRAIN_TOKEN. Anyone who can reach the port "
+                f"Refusing to listen on {self.host} without CODEBASE_BRAIN_TOKEN. Anyone who can reach the port "
                 "could use the server. Set a token, or bind to 127.0.0.1."
             )
 
@@ -85,7 +85,7 @@ class BearerTokenMiddleware:
                 "status": 401,
                 "headers": [
                     (b"content-type", b"application/json"),
-                    (b"www-authenticate", b'Bearer realm="project-brain"'),
+                    (b"www-authenticate", b'Bearer realm="codebase-brain"'),
                     (b"content-length", str(len(body)).encode()),
                 ],
             }

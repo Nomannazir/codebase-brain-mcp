@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Nomannazir/codebase-brain-mcp",
+  "title": "Codebase Brain",
+  "description": "Cited, searchable memory of a codebase: hybrid search, git history, impact analysis, doc drift.",
+  "repository": {
+    "url": "https://github.com/Nomannazir/codebase-brain-mcp",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "codebase-brain-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GITHUB_TOKEN",
+          "description": "Optional. Raises GitHub's rate limit when reading pull request titles and descriptions.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "CODEBASE_BRAIN_HOME",
+          "description": "Where indexes and clones are stored (default ~/.codebase-brain).",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

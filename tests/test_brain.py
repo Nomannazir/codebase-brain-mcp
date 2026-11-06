@@ -1,6 +1,6 @@
 import pytest
 
-from project_brain_mcp.brain import BrainError
+from codebase_brain_mcp.brain import BrainError
 
 
 def test_index_skips_ignored_dirs_and_reports_counts(brain, sample_repo):
@@ -71,7 +71,7 @@ def test_repo_is_required_when_several_are_indexed(brain, sample_repo, tmp_path)
 
 
 def test_bad_names_and_sources_are_rejected(brain, tmp_path):
-    from project_brain_mcp.sources import SourceError
+    from codebase_brain_mcp.sources import SourceError
 
     with pytest.raises(BrainError):
         brain.index(str(tmp_path), name="../escape")

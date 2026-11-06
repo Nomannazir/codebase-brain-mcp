@@ -1,8 +1,8 @@
 import pytest
 from starlette.testclient import TestClient
 
-from project_brain_mcp.remote import RemoteConfig, RemoteConfigError, build_app
-from project_brain_mcp.server import build_server
+from codebase_brain_mcp.remote import RemoteConfig, RemoteConfigError, build_app
+from codebase_brain_mcp.server import build_server
 
 TOKEN = "t" * 32
 INIT = {
@@ -20,7 +20,7 @@ def client(brain, **config):
 
 
 def test_public_host_requires_a_strong_token():
-    with pytest.raises(RemoteConfigError, match="without PROJECT_BRAIN_TOKEN"):
+    with pytest.raises(RemoteConfigError, match="without CODEBASE_BRAIN_TOKEN"):
         RemoteConfig(host="0.0.0.0", port=1, token=None).validate()
     with pytest.raises(RemoteConfigError, match="at least"):
         RemoteConfig(host="0.0.0.0", port=1, token="short").validate()
@@ -46,7 +46,7 @@ def test_mcp_accepts_the_right_token(brain):
     with client(brain) as c:
         response = c.post("/mcp", json=INIT, headers={**HEADERS, "authorization": f"Bearer {TOKEN}"})
     assert response.status_code == 200
-    assert "project-brain" in response.text
+    assert "codebase-brain" in response.text
 
 
 def test_loopback_server_blocks_dns_rebinding(brain):
@@ -59,8 +59,8 @@ def test_loopback_server_blocks_dns_rebinding(brain):
 def test_remote_mode_refuses_local_paths_and_huge_repos(settings, sample_repo):
     import dataclasses
 
-    from project_brain_mcp.brain import Brain, BrainError
-    from project_brain_mcp.embeddings import HashEmbedder
+    from codebase_brain_mcp.brain import Brain, BrainError
+    from codebase_brain_mcp.embeddings import HashEmbedder
 
     remote = Brain(dataclasses.replace(settings, allow_local_paths=False), HashEmbedder())
     with pytest.raises(BrainError, match="only indexes public https git URLs"):

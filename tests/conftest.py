@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from project_brain_mcp.brain import Brain
-from project_brain_mcp.config import Settings
-from project_brain_mcp.embeddings import HashEmbedder
+from codebase_brain_mcp.brain import Brain
+from codebase_brain_mcp.config import Settings
+from codebase_brain_mcp.embeddings import HashEmbedder
 
 SAMPLE_FILES = {
     "app/auth.py": '''
@@ -40,7 +40,7 @@ SAMPLE_FILES = {
     "README.md": """
         # Sample App
 
-        A tiny app used to test Project Brain.
+        A tiny app used to test Codebase Brain.
 
         ## Authentication
 

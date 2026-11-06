@@ -1,7 +1,7 @@
 import pytest
 
-from project_brain_mcp.brain import BrainError
-from project_brain_mcp.history import pr_numbers
+from codebase_brain_mcp.brain import BrainError
+from codebase_brain_mcp.history import pr_numbers
 
 
 def test_index_reads_history_once_then_incrementally(brain, git_repo):
@@ -62,8 +62,8 @@ def test_pr_numbers_from_common_message_styles():
 
 
 def test_github_pr_lookup_is_cached_and_failures_fall_back_to_links(brain, git_repo, monkeypatch):
-    from project_brain_mcp import history
-    from project_brain_mcp.history import PullRequest
+    from codebase_brain_mcp import history
+    from codebase_brain_mcp.history import PullRequest
 
     calls = []
 

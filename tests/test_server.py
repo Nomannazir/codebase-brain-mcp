@@ -1,7 +1,7 @@
 import pytest
 from mcp import Client
 
-from project_brain_mcp.server import build_server
+from codebase_brain_mcp.server import build_server
 
 pytestmark = pytest.mark.anyio
 

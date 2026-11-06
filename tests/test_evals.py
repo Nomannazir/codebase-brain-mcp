@@ -3,9 +3,9 @@ import textwrap
 
 import pytest
 
-from project_brain_mcp import evals
-from project_brain_mcp.evals import Dataset, DatasetError, Query, Target
-from project_brain_mcp.store import StoredChunk
+from codebase_brain_mcp import evals
+from codebase_brain_mcp.evals import Dataset, DatasetError, Query, Target
+from codebase_brain_mcp.store import StoredChunk
 
 
 def chunk(path, symbol=None, start=1):

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from project_brain_mcp.brain import BrainError
+from codebase_brain_mcp.brain import BrainError
 
 CODE = {
     "shop/pricing.py": """
