@@ -10,8 +10,17 @@ async def test_tools_are_listed_with_read_only_hints(brain):
     async with Client(build_server(brain)) as client:
         tools = {t.name: t for t in (await client.list_tools()).tools}
 
-    assert set(tools) == {"index_repo", "search", "ask_codebase", "read_lines", "list_repos", "explain_history",
-                          "search_history", "impact_of_change", "find_doc_drift"}
+    assert set(tools) == {
+        "index_repo",
+        "search",
+        "ask_codebase",
+        "read_lines",
+        "list_repos",
+        "explain_history",
+        "search_history",
+        "impact_of_change",
+        "find_doc_drift",
+    }
     assert tools["search"].annotations.read_only_hint is True
     assert tools["index_repo"].annotations.read_only_hint is False
 

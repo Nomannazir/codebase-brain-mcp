@@ -7,15 +7,15 @@ import pytest
 from project_brain_mcp.brain import BrainError
 
 CODE = {
-    "shop/pricing.py": '''
+    "shop/pricing.py": """
         def discount(price, rate=0.1):
             return round(price * (1 - rate), 2)
 
 
         def checkout_total(items):
             return sum(discount(i.price) for i in items)
-        ''',
-    "shop/cart.py": '''
+        """,
+    "shop/cart.py": """
         from shop.pricing import checkout_total
 
 
@@ -26,21 +26,21 @@ CODE = {
 
             def total(self):
                 return checkout_total(self.items)
-        ''',
-    "shop/settings.py": '''
+        """,
+    "shop/settings.py": """
         import os
 
         TIMEOUT = int(os.environ.get("SHOP_TIMEOUT", "30"))
-        ''',
-    "tests/test_pricing.py": '''
+        """,
+    "tests/test_pricing.py": """
         from shop.pricing import discount
 
 
         def test_discount():
             assert discount(10) == 9.0
-        ''',
+        """,
 }
-DOCS = '''
+DOCS = """
     # Shop
 
     Prices go through `discount()` in `shop/pricing.py`. Totals come from `checkout_total`.
@@ -60,7 +60,7 @@ DOCS = '''
     discount(100, percent=20)
     cart = Cart(items=[], currency="EUR")
     ```
-    '''
+    """
 
 
 @pytest.fixture
@@ -74,6 +74,7 @@ def shop(tmp_path: Path) -> Path:
 
 
 # ---- impact_of_change ---------------------------------------------------------------------------
+
 
 def test_impact_finds_direct_and_indirect_users_and_tests(brain, shop):
     brain.index(str(shop))
@@ -104,6 +105,7 @@ def test_impact_of_unknown_symbol_is_a_clear_error(brain, shop):
 
 
 # ---- find_doc_drift -----------------------------------------------------------------------------
+
 
 def _findings(brain, shop):
     brain.index(str(shop))
@@ -146,9 +148,15 @@ def test_drift_cites_the_doc_section(brain, shop):
 
 
 def test_drift_flags_docs_older_than_the_code_they_describe(brain, shop):
-    env = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null", "HOME": str(shop),
-           "GIT_AUTHOR_NAME": "Ada", "GIT_AUTHOR_EMAIL": "a@example.com",
-           "GIT_COMMITTER_NAME": "Ada", "GIT_COMMITTER_EMAIL": "a@example.com"}
+    env = {
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "HOME": str(shop),
+        "GIT_AUTHOR_NAME": "Ada",
+        "GIT_AUTHOR_EMAIL": "a@example.com",
+        "GIT_COMMITTER_NAME": "Ada",
+        "GIT_COMMITTER_EMAIL": "a@example.com",
+    }
 
     def git(*args, date=None):
         extra = {"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date} if date else {}
@@ -158,7 +166,9 @@ def test_drift_flags_docs_older_than_the_code_they_describe(brain, shop):
     git("add", ".")
     git("commit", "-q", "-m", "initial", date="2024-01-01T00:00:00+00:00")
     pricing = shop / "shop" / "pricing.py"
-    pricing.write_text(pricing.read_text().replace("round(price * (1 - rate), 2)", "max(0, round(price * (1 - rate), 2))"))
+    pricing.write_text(
+        pricing.read_text().replace("round(price * (1 - rate), 2)", "max(0, round(price * (1 - rate), 2))")
+    )
     git("commit", "-q", "-am", "Never return negative prices", date="2025-06-01T00:00:00+00:00")
     (shop / "CHANGES.md").write_text("# Changes\n\n- Removed `apply_discount_legacy()`.\n")
     brain.index(str(shop))
@@ -169,7 +179,7 @@ def test_drift_flags_docs_older_than_the_code_they_describe(brain, shop):
     assert stale and stale[0].severity == "low" and "Never return negative prices" in stale[0].detail
 
 
-RST = '''
+RST = """
 Signing
 =======
 
@@ -184,7 +194,7 @@ Use :class:`~shop.cart.Cart` and :func:`shop.pricing.discount`. The old
 >>> from shop.pricing import checkout_total
 >>> checkout_total([])
 0
-'''
+"""
 
 
 def test_drift_understands_restructuredtext(brain, shop):
@@ -192,7 +202,9 @@ def test_drift_understands_restructuredtext(brain, shop):
     (shop / "docs" / "guide.rst").write_text(textwrap.dedent(RST).lstrip())
     brain.index(str(shop))
 
-    found = {(f.kind, f.claim): f for f in brain.find_doc_drift(None, path_prefix="docs/", check_history=False).findings}
+    found = {
+        (f.kind, f.claim): f for f in brain.find_doc_drift(None, path_prefix="docs/", check_history=False).findings
+    }
 
     assert ("missing_symbol", "`shop.pricing.discounted`") in found
     assert ("wrong_parameters", "discount(percentage=…)") in found

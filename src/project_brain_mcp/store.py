@@ -138,18 +138,29 @@ class Store:
                 cur = self._db.execute(
                     "INSERT INTO chunks (path, start_line, end_line, kind, symbol, text, vector, params,"
                     " accepts_any_keyword) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (chunk.path, chunk.start_line, chunk.end_line, chunk.kind, chunk.symbol, chunk.text,
-                     np.asarray(vector, dtype=np.float32).tobytes(),
-                     None if chunk.params is None else json.dumps(list(chunk.params)),
-                     int(chunk.accepts_any_keyword)),
+                    (
+                        chunk.path,
+                        chunk.start_line,
+                        chunk.end_line,
+                        chunk.kind,
+                        chunk.symbol,
+                        chunk.text,
+                        np.asarray(vector, dtype=np.float32).tobytes(),
+                        None if chunk.params is None else json.dumps(list(chunk.params)),
+                        int(chunk.accepts_any_keyword),
+                    ),
                 )
-                self._db.executemany("INSERT INTO refs (chunk_id, name) VALUES (?, ?)",
-                                     [(cur.lastrowid, name) for name in chunk.refs])
+                self._db.executemany(
+                    "INSERT INTO refs (chunk_id, name) VALUES (?, ?)", [(cur.lastrowid, name) for name in chunk.refs]
+                )
                 body = f"{chunk.text}\n{identifier_terms(chunk.text)}"
-                self._db.execute("INSERT INTO chunks_fts (rowid, body, symbol, path) VALUES (?, ?, ?, ?)",
-                                 (cur.lastrowid, body, chunk.symbol or "", f"{path} {identifier_terms(path)}"))
-            self._db.execute("INSERT OR REPLACE INTO files (path, sha, language) VALUES (?, ?, ?)",
-                             (path, sha, language))
+                self._db.execute(
+                    "INSERT INTO chunks_fts (rowid, body, symbol, path) VALUES (?, ?, ?, ?)",
+                    (cur.lastrowid, body, chunk.symbol or "", f"{path} {identifier_terms(path)}"),
+                )
+            self._db.execute(
+                "INSERT OR REPLACE INTO files (path, sha, language) VALUES (?, ?, ?)", (path, sha, language)
+            )
             self._matrix = None
 
     def remove_file(self, path: str) -> None:
@@ -187,14 +198,17 @@ class Store:
             return {}
         marks = ",".join("?" * len(ids))
         rows = self._db.execute(
-            f"SELECT id, path, start_line, end_line, kind, symbol, text FROM chunks WHERE id IN ({marks})", ids)
+            f"SELECT id, path, start_line, end_line, kind, symbol, text FROM chunks WHERE id IN ({marks})",  # noqa: S608 (only "?" placeholders)
+            ids,
+        )
         return {row["id"]: StoredChunk(**dict(row)) for row in rows}
 
     def find_symbol(self, symbol: str, path: str | None = None) -> list[StoredChunk]:
         """Chunks whose symbol is ``symbol`` or ends with ``.symbol`` (so ``unsign`` finds ``Signer.unsign``)."""
-        query = ("SELECT id, path, start_line, end_line, kind, symbol, text FROM chunks"
-                 " WHERE (symbol = ? OR symbol GLOB ?)" + (" AND path = ?" if path else "") +
-                 " ORDER BY start_line")
+        query = (
+            "SELECT id, path, start_line, end_line, kind, symbol, text FROM chunks"  # noqa: S608 (fixed SQL)
+            " WHERE (symbol = ? OR symbol GLOB ?)" + (" AND path = ?" if path else "") + " ORDER BY start_line"
+        )
         params = [symbol, f"*.{_glob_literal(symbol)}"] + ([path] if path else [])
         return [StoredChunk(**dict(row)) for row in self._db.execute(query, params)]
 
@@ -203,28 +217,35 @@ class Store:
         rows = self._db.execute(
             "SELECT DISTINCT c.id, c.path, c.start_line, c.end_line, c.kind, c.symbol, c.text FROM refs r"
             " JOIN chunks c ON c.id = r.chunk_id WHERE r.name = ? ORDER BY c.path, c.start_line LIMIT ?",
-            (name, limit))
+            (name, limit),
+        )
         return [StoredChunk(**dict(row)) for row in rows]
 
     def symbols(self) -> list[tuple[str, str]]:
         """Every defined (symbol, path) pair."""
-        rows = self._db.execute("SELECT DISTINCT symbol, path FROM chunks WHERE symbol IS NOT NULL"
-                                " AND kind IN ('function', 'class', 'method')")
+        rows = self._db.execute(
+            "SELECT DISTINCT symbol, path FROM chunks WHERE symbol IS NOT NULL"
+            " AND kind IN ('function', 'class', 'method')"
+        )
         return [(row["symbol"], row["path"]) for row in rows]
 
     def signatures(self, short_name: str) -> list[tuple[str, str, list[str], bool]]:
         """(symbol, path, params, accepts_any_keyword) for functions named ``short_name``."""
         rows = self._db.execute(
             "SELECT symbol, path, params, accepts_any_keyword FROM chunks WHERE params IS NOT NULL"
-            " AND (symbol = ? OR symbol GLOB ?)", (short_name, f"*.{_glob_literal(short_name)}"))
+            " AND (symbol = ? OR symbol GLOB ?)",
+            (short_name, f"*.{_glob_literal(short_name)}"),
+        )
         return [(r["symbol"], r["path"], json.loads(r["params"]), bool(r["accepts_any_keyword"])) for r in rows]
 
     def file_paths(self) -> set[str]:
         return {row["path"] for row in self._db.execute("SELECT path FROM files")}
 
     def doc_chunks(self, path_prefix: str | None = None) -> list[StoredChunk]:
-        query = ("SELECT c.id, c.path, c.start_line, c.end_line, c.kind, c.symbol, c.text FROM chunks c"
-                 " JOIN files f ON f.path = c.path WHERE f.language IN ('markdown', 'text')")
+        query = (
+            "SELECT c.id, c.path, c.start_line, c.end_line, c.kind, c.symbol, c.text FROM chunks c"
+            " JOIN files f ON f.path = c.path WHERE f.language IN ('markdown', 'text')"
+        )
         params: list[str] = []
         if path_prefix:
             query += " AND c.path LIKE ?"
@@ -235,7 +256,9 @@ class Store:
         """Whether ``term`` appears anywhere in non-documentation files (a plain substring check)."""
         row = self._db.execute(
             "SELECT 1 FROM chunks c JOIN files f ON f.path = c.path"
-            " WHERE f.language NOT IN ('markdown', 'text') AND instr(c.text, ?) > 0 LIMIT 1", (term,)).fetchone()
+            " WHERE f.language NOT IN ('markdown', 'text') AND instr(c.text, ?) > 0 LIMIT 1",
+            (term,),
+        ).fetchone()
         return row is not None
 
     # ---- history --------------------------------------------------------------------------
@@ -245,11 +268,14 @@ class Store:
             for commit in commits:
                 cur = self._db.execute(
                     "INSERT OR IGNORE INTO commits (sha, author, date, subject, body, prs) VALUES (?, ?, ?, ?, ?, ?)",
-                    (commit.sha, commit.author, commit.date, commit.subject, commit.body, json.dumps(commit.prs)))
+                    (commit.sha, commit.author, commit.date, commit.subject, commit.body, json.dumps(commit.prs)),
+                )
                 if cur.rowcount:
                     added += 1
-                    self._db.execute("INSERT INTO commits_fts (subject, body, sha) VALUES (?, ?, ?)",
-                                     (f"{commit.subject} {identifier_terms(commit.subject)}", commit.body, commit.sha))
+                    self._db.execute(
+                        "INSERT INTO commits_fts (subject, body, sha) VALUES (?, ?, ?)",
+                        (f"{commit.subject} {identifier_terms(commit.subject)}", commit.body, commit.sha),
+                    )
         return added
 
     def commit_count(self) -> int:
@@ -262,9 +288,20 @@ class Store:
         rows = self._db.execute(
             "SELECT c.sha, c.author, c.date, c.subject, c.body, c.prs FROM commits_fts f"
             " JOIN commits c ON c.sha = f.sha WHERE commits_fts MATCH ?"
-            " ORDER BY bm25(commits_fts, 3.0, 1.0) LIMIT ?", (match, limit))
-        return [Commit(sha=r["sha"], author=r["author"], date=r["date"], subject=r["subject"], body=r["body"],
-                       prs=tuple(json.loads(r["prs"]))) for r in rows]
+            " ORDER BY bm25(commits_fts, 3.0, 1.0) LIMIT ?",
+            (match, limit),
+        )
+        return [
+            Commit(
+                sha=r["sha"],
+                author=r["author"],
+                date=r["date"],
+                subject=r["subject"],
+                body=r["body"],
+                prs=tuple(json.loads(r["prs"])),
+            )
+            for r in rows
+        ]
 
     def cached_pull_request(self, number: int) -> PullRequest | None:
         row = self._db.execute("SELECT data FROM pull_requests WHERE number = ?", (number,)).fetchone()
@@ -274,8 +311,10 @@ class Store:
         if pr.title is None:
             return  # don't cache failed lookups; they may work next time
         with self._lock, self._db:
-            self._db.execute("INSERT OR REPLACE INTO pull_requests (number, data) VALUES (?, ?)",
-                             (pr.number, json.dumps(pr.__dict__)))
+            self._db.execute(
+                "INSERT OR REPLACE INTO pull_requests (number, data) VALUES (?, ?)",
+                (pr.number, json.dumps(pr.__dict__)),
+            )
 
     # ---- retrieval ------------------------------------------------------------------------
     def keyword_search(self, query: str, limit: int) -> list[int]:
@@ -285,7 +324,8 @@ class Store:
             return []
         rows = self._db.execute(
             "SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts, 1.0, 4.0, 2.0) LIMIT ?",
-            (match, limit))
+            (match, limit),
+        )
         return [row[0] for row in rows]
 
     def vector_search(self, query_vector: np.ndarray, limit: int) -> list[int]:

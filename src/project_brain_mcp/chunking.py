@@ -74,7 +74,7 @@ def _python_chunks(path: str, lines: list[str], tree: ast.Module) -> list[Chunk]
             chunks.append(_make(path, lines, start, end, "function", node.name))
     # Whatever sits between definitions (imports, constants, module docstring) is one "module" chunk each.
     cursor = 1
-    for start, end in sorted(covered) + [(len(lines) + 1, len(lines) + 1)]:
+    for start, end in [*sorted(covered), (len(lines) + 1, len(lines) + 1)]:
         gap_start, gap_end = cursor, start - 1
         while gap_start <= gap_end and not lines[gap_start - 1].strip():
             gap_start += 1
@@ -108,11 +108,25 @@ def _with_python_facts(chunks: list[Chunk], tree: ast.Module) -> list[Chunk]:
     result = []
     for chunk in chunks:
         own = chunk.symbol.rsplit(".", 1)[-1] if chunk.symbol else None
-        refs = sorted({name for line, name in uses if chunk.start_line <= line <= chunk.end_line
-                       and name not in _IGNORED_NAMES and name != own and len(name) > 2})
+        refs = sorted(
+            {
+                name
+                for line, name in uses
+                if chunk.start_line <= line <= chunk.end_line
+                and name not in _IGNORED_NAMES
+                and name != own
+                and len(name) > 2
+            }
+        )
         signature = signatures.get(chunk.start_line) if chunk.kind in ("function", "method") else None
-        result.append(replace(chunk, refs=tuple(refs), params=signature[0] if signature else None,
-                              accepts_any_keyword=bool(signature and signature[1])))
+        result.append(
+            replace(
+                chunk,
+                refs=tuple(refs),
+                params=signature[0] if signature else None,
+                accepts_any_keyword=bool(signature and signature[1]),
+            )
+        )
     return result
 
 
@@ -129,8 +143,8 @@ def _class_chunks(path: str, lines: list[str], node: ast.ClassDef, start: int, e
     return chunks
 
 
-def _span(node: ast.AST) -> tuple[int, int]:
-    decorators = getattr(node, "decorator_list", [])
+def _span(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> tuple[int, int]:
+    decorators = node.decorator_list
     start = min([node.lineno, *(d.lineno for d in decorators)])
     return start, node.end_lineno or node.lineno
 
@@ -149,7 +163,7 @@ def _markdown_chunks(path: str, lines: list[str]) -> list[Chunk]:
         if number > section_start:
             chunks.append(_make(path, lines, section_start, number - 1, "section", section_symbol))
         level = len(match.group(1))
-        trail = trail[:level - 1] + [match.group(2)]
+        trail = [*trail[: level - 1], match.group(2)]
         section_start, section_symbol = number, " > ".join(trail)
     chunks.append(_make(path, lines, section_start, len(lines), "section", section_symbol))
     return [c for c in chunks if c.text.strip()]
@@ -177,5 +191,6 @@ def _split_long(chunk: Chunk, lines: list[str]) -> list[Chunk]:
 
 
 def _make(path: str, lines: list[str], start: int, end: int, kind: str, symbol: str | None) -> Chunk:
-    return Chunk(path=path, start_line=start, end_line=end, kind=kind, symbol=symbol,
-                 text="\n".join(lines[start - 1:end]))
+    return Chunk(
+        path=path, start_line=start, end_line=end, kind=kind, symbol=symbol, text="\n".join(lines[start - 1 : end])
+    )

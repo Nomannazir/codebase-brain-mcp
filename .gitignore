@@ -8,3 +8,4 @@ wheels/
 *.egg-info
 .demo-home/
 *.db
+.DS_Store

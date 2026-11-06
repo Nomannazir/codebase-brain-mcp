@@ -14,7 +14,7 @@ from pathlib import Path
 
 from . import history
 from .sources import SourceError
-from .store import StoredChunk, Store
+from .store import Store, StoredChunk
 
 MAX_PER_LEVEL = 60
 STALE_AFTER = timedelta(days=180)
@@ -23,8 +23,9 @@ _FENCE = re.compile(r"^(`{3,}|~{3,})\s*([\w+-]*)[^\n]*\n(.*?)^\1\s*$", re.MULTIL
 _INLINE = re.compile(r"(?<!`)`([^`\n]+)`(?!`)")
 _DOUBLE = re.compile(r"``([^`\n]+)``")
 _RST_ROLE = re.compile(r":(?:py:)?(?:func|meth|class|attr|mod|data|exc|obj|const):`([^`]+)`")
-_RST_BLOCK = re.compile(r"^\.\. (?:code-block|code|sourcecode)::[ \t]*(\w*)[^\n]*\n((?:[ \t]*\n|[ \t]+[^\n]*\n?)+)",
-                        re.MULTILINE)
+_RST_BLOCK = re.compile(
+    r"^\.\. (?:code-block|code|sourcecode)::[ \t]*(\w*)[^\n]*\n((?:[ \t]*\n|[ \t]+[^\n]*\n?)+)", re.MULTILINE
+)
 _DOCTEST = re.compile(r"^([ \t]*>>> [^\n]*\n(?:[ \t]*(?:>>>|\.\.\.)[^\n]*\n|[ \t]+[^\n]+\n)*)", re.MULTILINE)
 _PATH = re.compile(r"^\.?/?[\w.-]+(/[\w.-]+)+/?$")
 _ENV = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")
@@ -33,8 +34,9 @@ _SYMBOL = re.compile(r"^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*(\(\))?$")
 _TEST_PATH = re.compile(r"(^|/)(tests?|testing)/|(^|/)test_[^/]+$|_test\.\w+$")
 _COMMON = set(dir(builtins)) | set(keyword.kwlist) | {"true", "false", "null", "none", "self", "cls"}
 _SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
-_CHANGELOG = re.compile(r"(^|/)(CHANGES|CHANGELOG|HISTORY|NEWS|RELEASES?|RELEASE[-_]NOTES)[^/]*$|(^|/)changelog/",
-                        re.IGNORECASE)
+_CHANGELOG = re.compile(
+    r"(^|/)(CHANGES|CHANGELOG|HISTORY|NEWS|RELEASES?|RELEASE[-_]NOTES)[^/]*$|(^|/)changelog/", re.IGNORECASE
+)
 """Changelogs are meant to mention removed and renamed things, so they're never drift."""
 
 
@@ -42,8 +44,7 @@ def definition_span(matches: list[StoredChunk]) -> tuple[str, int, int, str | No
     """The real definition among same-named chunks: windows of one long function are merged back
     together, and the biggest span wins, so ``@overload`` stubs lose to the implementation."""
     first = matches[0]
-    same = sorted((c for c in matches if c.path == first.path and c.symbol == first.symbol),
-                  key=lambda c: c.start_line)
+    same = sorted((c for c in matches if c.path == first.path and c.symbol == first.symbol), key=lambda c: c.start_line)
     spans: list[list[int]] = []
     for chunk in same:
         if spans and chunk.start_line <= spans[-1][1] + 1:
@@ -55,6 +56,7 @@ def definition_span(matches: list[StoredChunk]) -> tuple[str, int, int, str | No
 
 
 # ---- impact_of_change -------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class Dependent:
@@ -92,28 +94,42 @@ def impact_of_change(store: Store, target: StoredChunk, span: tuple[int, int], d
                 if chunk.id in excluded or inside_target:
                     continue
                 excluded.add(chunk.id)
-                dependents.append(Dependent(chunk=chunk, via=name, level=level,
-                                            is_test=bool(_TEST_PATH.search(chunk.path))))
+                dependents.append(
+                    Dependent(chunk=chunk, via=name, level=level, is_test=bool(_TEST_PATH.search(chunk.path)))
+                )
                 if chunk.symbol and chunk.kind in ("function", "method", "class"):
                     next_frontier.append(chunk.symbol.rsplit(".", 1)[-1])
         frontier = list(dict.fromkeys(next_frontier))
         if not frontier:
             break
 
-    twins = sorted(f"{s} ({p})" for s, p in store.symbols()
-                   if s.rsplit(".", 1)[-1] == short and not (s == symbol and p == target.path))
+    twins = sorted(
+        f"{s} ({p})"
+        for s, p in store.symbols()
+        if s.rsplit(".", 1)[-1] == short and not (s == symbol and p == target.path)
+    )
     notes = []
     if twins:
-        notes.append(f"{len(twins)} other definition(s) share the name {short!r}; some dependents may use those "
-                     "instead. Check the import or receiver before changing anything.")
+        notes.append(
+            f"{len(twins)} other definition(s) share the name {short!r}; some dependents may use those "
+            "instead. Check the import or receiver before changing anything."
+        )
     if not target.path.endswith((".py", ".pyi")):
         notes.append("Only Python is analysed structurally; for other languages, also run search for the name.")
     notes.append("Found by name, so dynamic calls (getattr, string dispatch, callbacks) aren't included.")
-    return ImpactReport(symbol=symbol, path=target.path, start_line=span[0], end_line=span[1],
-                        dependents=dependents, same_name_definitions=twins, notes=notes)
+    return ImpactReport(
+        symbol=symbol,
+        path=target.path,
+        start_line=span[0],
+        end_line=span[1],
+        dependents=dependents,
+        same_name_definitions=twins,
+        notes=notes,
+    )
 
 
 # ---- find_doc_drift ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -134,8 +150,9 @@ class DriftReport:
     references_checked: int
 
 
-def find_doc_drift(store: Store, root: Path, path_prefix: str | None = None, check_history: bool = True,
-                   limit: int = 50) -> DriftReport:
+def find_doc_drift(
+    store: Store, root: Path, path_prefix: str | None = None, check_history: bool = True, limit: int = 50
+) -> DriftReport:
     """Documentation claims that no longer match the code: missing files, symbols, settings and flags,
     examples calling functions with parameters they don't take, and docs older than the code they describe."""
     checker = _DriftChecker(store, root)
@@ -145,8 +162,9 @@ def find_doc_drift(store: Store, root: Path, path_prefix: str | None = None, che
     if check_history and history.is_git_repo(root):
         checker.check_staleness()
     findings = sorted(checker.findings.values(), key=lambda f: (_SEVERITY_ORDER[f.severity], f.doc))
-    return DriftReport(findings=findings[:limit], sections_checked=checker.sections,
-                       references_checked=checker.references)
+    return DriftReport(
+        findings=findings[:limit], sections_checked=checker.sections, references_checked=checker.references
+    )
 
 
 class _DriftChecker:
@@ -158,8 +176,11 @@ class _DriftChecker:
         self.symbols = store.symbols()
         self.short_names = {s.rsplit(".", 1)[-1] for s, _ in self.symbols}
         self.full_names = {s for s, _ in self.symbols}
-        self.packages = {(p.split("/")[1] if p.startswith("src/") else p.split("/")[0]).removesuffix(".py")
-                         for p in self.files if p.endswith(".py") and not p.startswith(("tests/", "docs/"))}
+        self.packages = {
+            (p.split("/")[1] if p.startswith("src/") else p.split("/")[0]).removesuffix(".py")
+            for p in self.files
+            if p.endswith(".py") and not p.startswith(("tests/", "docs/"))
+        }
         self.findings: dict[tuple[str, str, str], Finding] = {}
         self.sections = 0
         self.references = 0
@@ -194,7 +215,7 @@ class _DriftChecker:
             self._expect_in_code(section, flag.group(1), "flag", "The command-line flag")
         elif _ENV.match(ref):
             self._expect_in_code(section, ref, "setting", "The setting")
-        elif _PATH.match(ref) and "." in ref.rsplit("/", 1)[-1] or ref.endswith("/"):
+        elif (_PATH.match(ref) and "." in ref.rsplit("/", 1)[-1]) or ref.endswith("/"):
             self._check_path(section, ref)
         elif _SYMBOL.match(ref):
             self._check_symbol(section, ref)
@@ -207,10 +228,16 @@ class _DriftChecker:
         basename = path.rsplit("/", 1)[-1]
         moved = sorted(p for p in self.files if p.rsplit("/", 1)[-1] == basename)
         close = moved or difflib.get_close_matches(path, list(self.files), n=1, cutoff=0.8)
-        self._add(Finding(
-            severity="high" if close else "medium", kind="missing_file", doc=section.citation, claim=f"`{ref}`",
-            detail=f"No file or directory {path!r} exists in the repository.",
-            suggestion=f"Did it move to {close[0]!r}?" if close else None))
+        self._add(
+            Finding(
+                severity="high" if close else "medium",
+                kind="missing_file",
+                doc=section.citation,
+                claim=f"`{ref}`",
+                detail=f"No file or directory {path!r} exists in the repository.",
+                suggestion=f"Did it move to {close[0]!r}?" if close else None,
+            )
+        )
 
     def _check_symbol(self, section: StoredChunk, ref: str, explicit: bool = False) -> None:
         name = ref.removesuffix("()")
@@ -227,22 +254,38 @@ class _DriftChecker:
         if self._mentioned(short):
             return  # used in code (a variable, attribute or third-party name); not ours to judge
         close = difflib.get_close_matches(short, sorted(self.short_names), n=1, cutoff=0.75)
-        self._add(Finding(
-            severity="high" if close else "medium", kind="missing_symbol", doc=section.citation, claim=f"`{ref}`",
-            detail=f"{short!r} isn't defined or used anywhere in the code.",
-            suggestion=f"Was it renamed to {close[0]!r}?" if close else None))
+        self._add(
+            Finding(
+                severity="high" if close else "medium",
+                kind="missing_symbol",
+                doc=section.citation,
+                claim=f"`{ref}`",
+                detail=f"{short!r} isn't defined or used anywhere in the code.",
+                suggestion=f"Was it renamed to {close[0]!r}?" if close else None,
+            )
+        )
 
     def _expect_in_code(self, section: StoredChunk, term: str, kind: str, label: str) -> None:
         self.references += 1
         if not self._mentioned(term):
-            self._add(Finding(severity="medium", kind=f"unknown_{kind}", doc=section.citation, claim=f"`{term}`",
-                              detail=f"{label} {term} doesn't appear anywhere in the code."))
+            self._add(
+                Finding(
+                    severity="medium",
+                    kind=f"unknown_{kind}",
+                    doc=section.citation,
+                    claim=f"`{term}`",
+                    detail=f"{label} {term} doesn't appear anywhere in the code.",
+                )
+            )
 
     # -- code examples -------------------------------------------------------------------
     def _check_code_block(self, section: StoredChunk, body: str) -> None:
         body = textwrap.dedent(body)
-        lines = [re.sub(r"^(>>>|\.\.\.) ?", "", line) for line in body.splitlines()
-                 if not body.lstrip().startswith(">>>") or line.startswith((">>>", "..."))]
+        lines = [
+            re.sub(r"^(>>>|\.\.\.) ?", "", line)
+            for line in body.splitlines()
+            if not body.lstrip().startswith(">>>") or line.startswith((">>>", "..."))
+        ]
         try:
             tree = ast.parse(textwrap.dedent("\n".join(lines)))
         except (SyntaxError, ValueError):
@@ -274,24 +317,36 @@ class _DriftChecker:
             return
         symbol, path, params, _ = signatures[0]
         unknown = [k for k in keywords if k not in params]
-        suggestion = "; ".join(f"{k!r} → {m[0]!r}?" for k in unknown
-                               if (m := difflib.get_close_matches(k, params, n=1, cutoff=0.6)))
-        self._add(Finding(
-            severity="high", kind="wrong_parameters", doc=section.citation,
-            claim=f"{name}({', '.join(f'{k}=…' for k in keywords)})",
-            detail=f"{symbol} in {path} takes ({', '.join(params)}); the example passes "
-                   f"{', '.join(unknown)}, which it doesn't accept.",
-            suggestion=suggestion or None))
+        suggestion = "; ".join(
+            f"{k!r} → {m[0]!r}?" for k in unknown if (m := difflib.get_close_matches(k, params, n=1, cutoff=0.6))
+        )
+        self._add(
+            Finding(
+                severity="high",
+                kind="wrong_parameters",
+                doc=section.citation,
+                claim=f"{name}({', '.join(f'{k}=…' for k in keywords)})",
+                detail=f"{symbol} in {path} takes ({', '.join(params)}); the example passes "
+                f"{', '.join(unknown)}, which it doesn't accept.",
+                suggestion=suggestion or None,
+            )
+        )
 
     def _check_import(self, section: StoredChunk, module: str, name: str) -> None:
         self.references += 1
         if name in self.short_names or self._mentioned(f"{name} =") or self._mentioned(f"import {name}"):
             return
         close = difflib.get_close_matches(name, sorted(self.short_names), n=1, cutoff=0.75)
-        self._add(Finding(
-            severity="high", kind="broken_import", doc=section.citation, claim=f"from {module} import {name}",
-            detail=f"{name!r} isn't defined in the project, so this example fails with ImportError.",
-            suggestion=f"Was it renamed to {close[0]!r}?" if close else None))
+        self._add(
+            Finding(
+                severity="high",
+                kind="broken_import",
+                doc=section.citation,
+                claim=f"from {module} import {name}",
+                detail=f"{name!r} isn't defined in the project, so this example fails with ImportError.",
+                suggestion=f"Was it renamed to {close[0]!r}?" if close else None,
+            )
+        )
 
     def _is_project_module(self, module: str) -> bool:
         top = module.split(".")[0]
@@ -327,15 +382,25 @@ class _DriftChecker:
             code_date = datetime.fromisoformat(commit.date)
             if code_date - doc_date > STALE_AFTER:
                 entry = stale.setdefault(section.citation, (section, []))
-                entry[1].append(f"{symbol} ({path}:{start}-{end}) changed {code_date.date()} in "
-                                f"{commit.sha[:10]} ({commit.subject!r})")
+                entry[1].append(
+                    f"{symbol} ({path}:{start}-{end}) changed {code_date.date()} in "
+                    f"{commit.sha[:10]} ({commit.subject!r})"
+                )
         for citation, (section, changed) in stale.items():
             doc_date = doc_dates[section.path]
-            self._add(Finding(
-                severity="low", kind="docs_older_than_code", doc=citation,
-                claim=", ".join(f"`{c.split(' ', 1)[0]}`" for c in changed),
-                detail=f"{section.path} was last edited on {doc_date.date()}, but since then: " + "; ".join(changed),
-                suggestion="Check this section still describes the current behaviour."))
+            if doc_date is None:
+                continue
+            self._add(
+                Finding(
+                    severity="low",
+                    kind="docs_older_than_code",
+                    doc=citation,
+                    claim=", ".join(f"`{c.split(' ', 1)[0]}`" for c in changed),
+                    detail=f"{section.path} was last edited on {doc_date.date()}, but since then: "
+                    + "; ".join(changed),
+                    suggestion="Check this section still describes the current behaviour.",
+                )
+            )
 
     def _last_change(self, path: str) -> datetime | None:
         try:

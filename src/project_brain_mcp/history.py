@@ -72,15 +72,21 @@ def commits(root: Path, since: str | None, limit: int) -> list[Commit]:
     revision = "HEAD"
     if since and _is_ancestor(root, since):
         revision = f"{since}..HEAD"
-    out = run_git(root, "log", revision, f"--max-count={limit}",
-               f"--format=%H{FIELD}%an{FIELD}%aI{FIELD}%s{FIELD}%b{RECORD}")
+    out = run_git(
+        root, "log", revision, f"--max-count={limit}", f"--format=%H{FIELD}%an{FIELD}%aI{FIELD}%s{FIELD}%b{RECORD}"
+    )
     return [_parse_commit(record) for record in out.split(RECORD) if record.strip()]
 
 
 def line_history(root: Path, path: str, start: int, end: int, limit: int) -> list[LineChange]:
     """Commits that changed lines start..end of ``path`` (following the lines as they moved), newest first."""
-    out = run_git(root, "log", f"-L{start},{end}:{path}", f"--max-count={limit}",
-               f"--format={COMMIT_MARKER}%H{FIELD}%an{FIELD}%aI{FIELD}%s{FIELD}%b{RECORD}")
+    out = run_git(
+        root,
+        "log",
+        f"-L{start},{end}:{path}",
+        f"--max-count={limit}",
+        f"--format={COMMIT_MARKER}%H{FIELD}%an{FIELD}%aI{FIELD}%s{FIELD}%b{RECORD}",
+    )
     changes = []
     for block in out.split(COMMIT_MARKER):
         if not block.strip() or RECORD not in block:
@@ -92,8 +98,15 @@ def line_history(root: Path, path: str, start: int, end: int, limit: int) -> lis
 
 def file_history(root: Path, path: str, limit: int) -> list[LineChange]:
     """Commits that touched ``path`` at all (following renames), newest first, without diffs."""
-    out = run_git(root, "log", "--follow", f"--max-count={limit}",
-               f"--format=%H{FIELD}%an{FIELD}%aI{FIELD}%s{FIELD}%b{RECORD}", "--", path)
+    out = run_git(
+        root,
+        "log",
+        "--follow",
+        f"--max-count={limit}",
+        f"--format=%H{FIELD}%an{FIELD}%aI{FIELD}%s{FIELD}%b{RECORD}",
+        "--",
+        path,
+    )
     return [LineChange(commit=_parse_commit(r), diff="") for r in out.split(RECORD) if r.strip()]
 
 
@@ -114,8 +127,15 @@ def blame(root: Path, path: str, start: int, end: int) -> list[BlameShare]:
     shares = []
     for sha, lines in counts.most_common():
         meta = info[sha]
-        shares.append(BlameShare(sha=sha, author=meta.get("author", ""), date=_epoch_to_iso(meta.get("author-time")),
-                                 subject=meta.get("summary", ""), lines=lines))
+        shares.append(
+            BlameShare(
+                sha=sha,
+                author=meta.get("author", ""),
+                date=_epoch_to_iso(meta.get("author-time")),
+                subject=meta.get("summary", ""),
+                lines=lines,
+            )
+        )
     return shares
 
 
@@ -142,9 +162,10 @@ def pr_numbers(message: str) -> tuple[int, ...]:
 def fetch_pull_request(slug: str, number: int, token: str | None) -> PullRequest:
     """The PR's title and description from the GitHub API. On any failure, just the link."""
     url = f"https://github.com/{slug}/pull/{number}"
-    request = urllib.request.Request(f"https://api.github.com/repos/{slug}/pulls/{number}",
-                                     headers={"Accept": "application/vnd.github+json",
-                                              "User-Agent": "project-brain-mcp"})
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{slug}/pulls/{number}",
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "project-brain-mcp"},
+    )
     if token:
         request.add_header("Authorization", f"Bearer {token}")
     try:
@@ -152,15 +173,27 @@ def fetch_pull_request(slug: str, number: int, token: str | None) -> PullRequest
             data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, ValueError, OSError):
         return PullRequest(number=number, url=url)
-    return PullRequest(number=number, url=url, title=data.get("title"), body=_trim(data.get("body") or "", BODY_CHARS),
-                       state=data.get("state"), merged_at=data.get("merged_at"))
+    return PullRequest(
+        number=number,
+        url=url,
+        title=data.get("title"),
+        body=_trim(data.get("body") or "", BODY_CHARS),
+        state=data.get("state"),
+        merged_at=data.get("merged_at"),
+    )
 
 
 def _parse_commit(record: str) -> Commit:
     sha, author, date, subject, body = (record.strip("\n").split(FIELD) + [""] * 5)[:5]
     body = body.strip()
-    return Commit(sha=sha.strip(), author=author, date=date, subject=subject, body=_trim(body, BODY_CHARS),
-                  prs=pr_numbers(f"{subject}\n{body}"))
+    return Commit(
+        sha=sha.strip(),
+        author=author,
+        date=date,
+        subject=subject,
+        body=_trim(body, BODY_CHARS),
+        prs=pr_numbers(f"{subject}\n{body}"),
+    )
 
 
 def _is_ancestor(root: Path, sha: str) -> bool:

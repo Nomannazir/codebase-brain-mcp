@@ -89,10 +89,14 @@ def test_symbol_resolves_to_the_implementation_not_overload_stubs(brain, git_rep
         "from typing import overload\n\n\n"
         "@overload\ndef parse(x: int) -> int: ...\n\n\n"
         "@overload\ndef parse(x: str) -> str: ...\n\n\n"
-        "def parse(x):\n    if isinstance(x, int):\n        return x\n    return str(x)\n")
+        "def parse(x):\n    if isinstance(x, int):\n        return x\n    return str(x)\n"
+    )
     subprocess.run(["git", "add", "."], cwd=git_repo, check=True)
-    subprocess.run(["git", "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-q", "-m",
-                    "Add parse"], cwd=git_repo, check=True)
+    subprocess.run(
+        ["git", "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-q", "-m", "Add parse"],
+        cwd=git_repo,
+        check=True,
+    )
     brain.index(str(git_repo))
 
     report = brain.explain_history(None, symbol="parse")

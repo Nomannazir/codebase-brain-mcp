@@ -9,19 +9,62 @@ from dataclasses import dataclass
 from pathlib import Path
 
 LANGUAGES = {
-    ".py": "python", ".pyi": "python",
-    ".md": "markdown", ".mdx": "markdown", ".rst": "text", ".txt": "text",
-    ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript", ".cjs": "javascript",
-    ".ts": "typescript", ".tsx": "typescript",
-    ".go": "go", ".rs": "rust", ".java": "java", ".kt": "kotlin", ".rb": "ruby", ".php": "php",
-    ".c": "c", ".h": "c", ".cc": "cpp", ".cpp": "cpp", ".hpp": "cpp", ".cs": "csharp", ".swift": "swift",
-    ".sh": "shell", ".bash": "shell", ".sql": "sql",
-    ".html": "html", ".css": "css", ".scss": "css",
-    ".toml": "config", ".yaml": "config", ".yml": "config", ".json": "config", ".ini": "config", ".cfg": "config",
+    ".py": "python",
+    ".pyi": "python",
+    ".md": "markdown",
+    ".mdx": "markdown",
+    ".rst": "text",
+    ".txt": "text",
+    ".js": "javascript",
+    ".jsx": "javascript",
+    ".mjs": "javascript",
+    ".cjs": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".go": "go",
+    ".rs": "rust",
+    ".java": "java",
+    ".kt": "kotlin",
+    ".rb": "ruby",
+    ".php": "php",
+    ".c": "c",
+    ".h": "c",
+    ".cc": "cpp",
+    ".cpp": "cpp",
+    ".hpp": "cpp",
+    ".cs": "csharp",
+    ".swift": "swift",
+    ".sh": "shell",
+    ".bash": "shell",
+    ".sql": "sql",
+    ".html": "html",
+    ".css": "css",
+    ".scss": "css",
+    ".toml": "config",
+    ".yaml": "config",
+    ".yml": "config",
+    ".json": "config",
+    ".ini": "config",
+    ".cfg": "config",
 }
 NAMED_FILES = {"Dockerfile": "config", "Makefile": "config", "README": "text", "LICENSE": "text"}
-SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build", ".mypy_cache", ".pytest_cache",
-             ".tox", ".next", "target", "vendor", ".idea", ".vscode"}
+SKIP_DIRS = {
+    ".git",
+    "node_modules",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "dist",
+    "build",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".tox",
+    ".next",
+    "target",
+    "vendor",
+    ".idea",
+    ".vscode",
+}
 SKIP_FILES = {"package-lock.json", "yarn.lock", "pnpm-lock.yaml", "poetry.lock", "uv.lock", "Cargo.lock"}
 GIT_TIMEOUT_SECONDS = 300
 _URL = re.compile(r"^https://[A-Za-z0-9.-]+/[A-Za-z0-9._/-]+?(\.git)?/?$")
@@ -133,8 +176,9 @@ def _candidate_paths(root: Path) -> list[str]:
 def run_git(cwd: Path, *args: str) -> str:
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_ALLOW_PROTOCOL": "https:file"}
     try:
-        done = subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, text=True,
-                              timeout=GIT_TIMEOUT_SECONDS, check=False)
+        done = subprocess.run(
+            ["git", *args], cwd=cwd, env=env, capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS, check=False
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise SourceError(f"git {args[0]} failed: {exc}") from exc
     if done.returncode != 0:

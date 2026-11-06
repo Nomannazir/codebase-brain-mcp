@@ -39,8 +39,11 @@ def main(argv: list[str] | None = None) -> int:
     brain = Brain(load_settings())
     try:
         if args.command == "index":
-            report = brain.index(args.source, name=args.name,
-                                 progress=lambda done, total, msg: print(f"  [{done}/{total}] {msg}", file=sys.stderr))
+            report = brain.index(
+                args.source,
+                name=args.name,
+                progress=lambda done, total, msg: print(f"  [{done}/{total}] {msg}", file=sys.stderr),
+            )
             print(report)
         else:
             for hit in brain.search(args.query, args.repo, args.k):

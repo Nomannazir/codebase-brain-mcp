@@ -11,9 +11,9 @@ from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field
 
 from .analysis import DriftReport, ImpactReport
-from .brain import Brain, BrainError, Hit, HistoryReport
-from .history import Commit
+from .brain import Brain, BrainError, HistoryReport, Hit
 from .config import load_settings
+from .history import Commit
 from .sources import SourceError
 
 INSTRUCTIONS = """\
@@ -163,8 +163,11 @@ def build_server(brain: Brain | None = None) -> MCPServer:
     brain = brain or Brain(load_settings())
     server = MCPServer("project-brain", instructions=INSTRUCTIONS, version="0.1.0")
 
-    @server.tool(annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True,
-                                             open_world_hint=True))
+    @server.tool(
+        annotations=ToolAnnotations(
+            read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=True
+        )
+    )
     async def index_repo(source: str, ctx: Context, name: str | None = None) -> IndexResult:
         """Index a repository so it can be searched. `source` is a local directory or an https git URL
         (cloned shallowly). Re-running only re-embeds files that changed since the last run."""
@@ -179,8 +182,9 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         return IndexResult(**report.__dict__)
 
     @server.tool(annotations=READ_ONLY)
-    async def search(query: str, repo: str | None = None, k: int = 8, path_prefix: str | None = None,
-                     kinds: list[str] | None = None) -> SearchResult:
+    async def search(
+        query: str, repo: str | None = None, k: int = 8, path_prefix: str | None = None, kinds: list[str] | None = None
+    ) -> SearchResult:
         """Hybrid search (BM25 keywords + embeddings, fused by rank). Filter by `path_prefix`
         (e.g. "src/auth/") or `kinds` (function, class, method, module, section, code)."""
         hits = await _search(brain, query, repo, k, path_prefix, kinds)
@@ -196,16 +200,26 @@ def build_server(brain: Brain | None = None) -> MCPServer:
             "Answer the question using only these sources. Cite every claim as path:start-end. "
             "If the sources don't contain the answer, say so and suggest a better search or a file to read "
             "with read_lines."
-            if hits else
-            "Nothing relevant was found. Try search with different keywords, or check the repo is indexed."
+            if hits
+            else "Nothing relevant was found. Try search with different keywords, or check the repo is indexed."
         )
-        return AskResult(repo=brain.resolve_repo(repo), question=question, instructions=instructions,
-                         sources=[_source(h) for h in hits], related_commits=[_commit(c) for c in commits])
+        return AskResult(
+            repo=brain.resolve_repo(repo),
+            question=question,
+            instructions=instructions,
+            sources=[_source(h) for h in hits],
+            related_commits=[_commit(c) for c in commits],
+        )
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
-    async def explain_history(repo: str | None = None, symbol: str | None = None, path: str | None = None,
-                              start_line: int | None = None, end_line: int | None = None,
-                              max_commits: int = 8) -> HistoryResult:
+    async def explain_history(
+        repo: str | None = None,
+        symbol: str | None = None,
+        path: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        max_commits: int = 8,
+    ) -> HistoryResult:
         """Why code looks the way it does. Give a `symbol` (e.g. "unsign" or "Signer.sign"), or a `path`
         with optional line range. Returns who wrote the current lines, every commit that changed them
         (with the relevant diff), and the pull requests behind those commits."""
@@ -213,16 +227,18 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         return _history(report)
 
     @server.tool(annotations=READ_ONLY)
-    async def impact_of_change(symbol: str, repo: str | None = None, path: str | None = None,
-                               depth: int = 2) -> ImpactResult:
+    async def impact_of_change(
+        symbol: str, repo: str | None = None, path: str | None = None, depth: int = 2
+    ) -> ImpactResult:
         """What breaks if `symbol` changes: code that uses it directly, code that uses that code
         (up to `depth`, max 3), and the tests involved. Python is analysed structurally."""
         report = await _call(lambda: brain.impact_of_change(repo, symbol, path, depth))
         return _impact(report)
 
     @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
-    async def find_doc_drift(repo: str | None = None, path_prefix: str | None = None, check_history: bool = True,
-                             limit: int = 50) -> DriftResult:
+    async def find_doc_drift(
+        repo: str | None = None, path_prefix: str | None = None, check_history: bool = True, limit: int = 50
+    ) -> DriftResult:
         """Documentation that no longer matches the code: files, functions, settings and flags that don't
         exist; examples passing parameters a function doesn't take; imports that would fail; and docs last
         edited long before the code they describe changed. Each finding cites the doc section."""
@@ -248,8 +264,12 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         """Repositories indexed so far, with size, languages and the commit they were indexed at."""
         return [_summary(info) for info in brain.repos()]
 
-    @server.resource("brain://repos", name="indexed-repos", mime_type="application/json",
-                     description="Every indexed repository and its stats.")
+    @server.resource(
+        "brain://repos",
+        name="indexed-repos",
+        mime_type="application/json",
+        description="Every indexed repository and its stats.",
+    )
     def repos_resource() -> str:
         return "[" + ",".join(_summary(info).model_dump_json() for info in brain.repos()) + "]"
 
@@ -258,8 +278,7 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         target = f" in the {repo} repo" if repo else ""
         return (
             f"Question about the codebase{target}: {question}\n\n"
-            "1. Call ask_codebase with this question"
-            + (f' and repo="{repo}"' if repo else "") + ".\n"
+            "1. Call ask_codebase with this question" + (f' and repo="{repo}"' if repo else "") + ".\n"
             "2. If a source looks relevant but is cut off, open it with read_lines.\n"
             "3. Answer in a few short paragraphs. Cite every claim as path:start-end.\n"
             "4. If the sources don't answer it, say what's missing instead of guessing."
@@ -268,8 +287,9 @@ def build_server(brain: Brain | None = None) -> MCPServer:
     return server
 
 
-async def _search(brain: Brain, query: str, repo: str | None, k: int, path_prefix: str | None,
-                  kinds: list[str] | None) -> list[Hit]:
+async def _search(
+    brain: Brain, query: str, repo: str | None, k: int, path_prefix: str | None, kinds: list[str] | None
+) -> list[Hit]:
     k = max(1, min(k, MAX_RESULTS))
     return await _call(lambda: brain.search(query, repo, k, path_prefix, kinds))
 
@@ -283,34 +303,62 @@ async def _call(fn):
 
 
 def _commit(commit: Commit) -> CommitInfo:
-    return CommitInfo(sha=commit.sha[:10], author=commit.author, date=commit.date, subject=commit.subject,
-                      body=commit.body, pull_requests=list(commit.prs))
+    return CommitInfo(
+        sha=commit.sha[:10],
+        author=commit.author,
+        date=commit.date,
+        subject=commit.subject,
+        body=commit.body,
+        pull_requests=list(commit.prs),
+    )
 
 
 def _impact(report: ImpactReport) -> ImpactResult:
     def info(d) -> DependentInfo:
-        return DependentInfo(citation=d.chunk.citation, symbol=d.chunk.symbol, kind=d.chunk.kind, via=d.via,
-                             level=d.level, is_test=d.is_test)
+        return DependentInfo(
+            citation=d.chunk.citation,
+            symbol=d.chunk.symbol,
+            kind=d.chunk.kind,
+            via=d.via,
+            level=d.level,
+            is_test=d.is_test,
+        )
 
     direct = [info(d) for d in report.dependents if d.level == 1]
     indirect = [info(d) for d in report.dependents if d.level > 1]
     tests = [d.chunk.citation for d in report.dependents if d.is_test]
     files = len({d.chunk.path for d in report.dependents})
-    summary = (f"{report.symbol} is used directly in {len(direct)} place(s) and indirectly in {len(indirect)}, "
-               f"across {files} file(s); {len(tests)} test chunk(s) exercise it.")
-    return ImpactResult(target=f"{report.path}:{report.start_line}-{report.end_line}", symbol=report.symbol,
-                        summary=summary, direct=direct, indirect=indirect, tests=tests,
-                        same_name_definitions=report.same_name_definitions, notes=report.notes)
+    summary = (
+        f"{report.symbol} is used directly in {len(direct)} place(s) and indirectly in {len(indirect)}, "
+        f"across {files} file(s); {len(tests)} test chunk(s) exercise it."
+    )
+    return ImpactResult(
+        target=f"{report.path}:{report.start_line}-{report.end_line}",
+        symbol=report.symbol,
+        summary=summary,
+        direct=direct,
+        indirect=indirect,
+        tests=tests,
+        same_name_definitions=report.same_name_definitions,
+        notes=report.notes,
+    )
 
 
 def _drift(repo: str, report: DriftReport) -> DriftResult:
     counts = {level: sum(f.severity == level for f in report.findings) for level in ("high", "medium", "low")}
-    summary = (f"{len(report.findings)} finding(s) in {report.sections_checked} doc section(s): "
-               f"{counts['high']} high, {counts['medium']} medium, {counts['low']} low."
-               if report.findings else f"No drift found in {report.sections_checked} doc section(s).")
-    return DriftResult(repo=repo, summary=summary, sections_checked=report.sections_checked,
-                       references_checked=report.references_checked,
-                       findings=[FindingInfo(**f.__dict__) for f in report.findings])
+    summary = (
+        f"{len(report.findings)} finding(s) in {report.sections_checked} doc section(s): "
+        f"{counts['high']} high, {counts['medium']} medium, {counts['low']} low."
+        if report.findings
+        else f"No drift found in {report.sections_checked} doc section(s)."
+    )
+    return DriftResult(
+        repo=repo,
+        summary=summary,
+        sections_checked=report.sections_checked,
+        references_checked=report.references_checked,
+        findings=[FindingInfo(**f.__dict__) for f in report.findings],
+    )
 
 
 def _history(report: HistoryReport) -> HistoryResult:
@@ -319,12 +367,18 @@ def _history(report: HistoryReport) -> HistoryResult:
         "Explain why this code looks the way it does, oldest change first: what each commit changed and the "
         "reason its message or PR gives. Cite commits by short sha and code as path:start-end. If the messages "
         "don't say why, say so rather than guessing."
-        if report.changes else "No commits changed these lines (they may be uncommitted)."
+        if report.changes
+        else "No commits changed these lines (they may be uncommitted)."
     )
     return HistoryResult(
-        repo=report.repo, citation=citation, symbol=report.symbol, instructions=instructions,
-        authorship=[Authorship(sha=b.sha[:10], author=b.author, date=b.date, subject=b.subject, lines=b.lines)
-                    for b in report.blame],
+        repo=report.repo,
+        citation=citation,
+        symbol=report.symbol,
+        instructions=instructions,
+        authorship=[
+            Authorship(sha=b.sha[:10], author=b.author, date=b.date, subject=b.subject, lines=b.lines)
+            for b in report.blame
+        ],
         changes=[Change(commit=_commit(c.commit), diff=c.diff) for c in report.changes],
         pull_requests=[PullRequestInfo(**pr.__dict__) for pr in report.pull_requests],
     )
@@ -334,10 +388,27 @@ def _source(hit: Hit) -> Source:
     chunk = hit.chunk
     matched = [name for name, rank in (("keyword", hit.keyword_rank), ("vector", hit.vector_rank)) if rank]
     snippet = chunk.text if len(chunk.text) <= SNIPPET_CHARS else chunk.text[:SNIPPET_CHARS] + "\n…"
-    return Source(citation=chunk.citation, path=chunk.path, start_line=chunk.start_line, end_line=chunk.end_line,
-                  kind=chunk.kind, symbol=chunk.symbol, score=hit.score, matched_by=matched, snippet=snippet)
+    return Source(
+        citation=chunk.citation,
+        path=chunk.path,
+        start_line=chunk.start_line,
+        end_line=chunk.end_line,
+        kind=chunk.kind,
+        symbol=chunk.symbol,
+        score=hit.score,
+        matched_by=matched,
+        snippet=snippet,
+    )
 
 
 def _summary(info) -> RepoSummary:
-    return RepoSummary(name=info.name, source=info.source, commit=info.commit, indexed_at=info.indexed_at,
-                       files=info.files, chunks=info.chunks, commits=info.commits, languages=info.languages)
+    return RepoSummary(
+        name=info.name,
+        source=info.source,
+        commit=info.commit,
+        indexed_at=info.indexed_at,
+        files=info.files,
+        chunks=info.chunks,
+        commits=info.commits,
+        languages=info.languages,
+    )

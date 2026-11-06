@@ -16,7 +16,7 @@ from .chunking import chunk_file
 from .config import Settings
 from .embeddings import Embedder, make_embedder
 from .history import BlameShare, Commit, LineChange, PullRequest
-from .store import StoredChunk, Store
+from .store import Store, StoredChunk
 
 RRF_K = 60
 """Reciprocal-rank-fusion constant; 60 is the value from the original paper and works well untuned."""
@@ -100,8 +100,9 @@ class Brain:
         store = self._store(name)
 
         meta = store.get_meta()
-        full_rebuild = (meta.get("embed_model") != self.embedder.model_id
-                        or meta.get("schema_version") != store.schema_version)
+        full_rebuild = (
+            meta.get("embed_model") != self.embedder.model_id or meta.get("schema_version") != store.schema_version
+        )
         if full_rebuild:
             store.clear()
         known = store.file_hashes()
@@ -115,13 +116,14 @@ class Brain:
         notify = progress or (lambda done, total, message: None)
         notify(0, len(changed), f"{len(changed)} of {len(files)} files need indexing")
         for start in range(0, len(changed), EMBED_BATCH_FILES):
-            batch = changed[start:start + EMBED_BATCH_FILES]
+            batch = changed[start : start + EMBED_BATCH_FILES]
             per_file = [chunk_file(f.path, f.language, f.text) for f in batch]
             vectors = self.embedder.embed_documents([_embedding_text(c) for chunks in per_file for c in chunks])
             offset = 0
             for file, chunks in zip(batch, per_file, strict=True):
-                store.replace_file(file.path, _sha(file.text), file.language, chunks,
-                                   vectors[offset:offset + len(chunks)])
+                store.replace_file(
+                    file.path, _sha(file.text), file.language, chunks, vectors[offset : offset + len(chunks)]
+                )
                 offset += len(chunks)
             notify(min(start + len(batch), len(changed)), len(changed), batch[-1].path)
 
@@ -131,19 +133,39 @@ class Brain:
             notify(len(changed), len(changed), "reading git history")
             since = None if full_rebuild else meta.get("history_head") or None
             commits_added = store.add_commits(history.commits(root, since, HISTORY_LIMIT))
-        store.set_meta(source=source, root=str(root), commit=commit or "", embed_model=self.embedder.model_id,
-                       history_head=commit or "", schema_version=store.schema_version, indexed_at=datetime.now(UTC).isoformat(timespec="seconds"))
+        store.set_meta(
+            source=source,
+            root=str(root),
+            commit=commit or "",
+            embed_model=self.embedder.model_id,
+            history_head=commit or "",
+            schema_version=store.schema_version,
+            indexed_at=datetime.now(UTC).isoformat(timespec="seconds"),
+        )
         return IndexReport(
-            repo=name, root=str(root), commit=commit, files_seen=len(files), files_indexed=len(changed),
-            files_unchanged=len(files) - len(changed), files_removed=len(removed),
-            chunks_total=store.counts()["chunks"], commits_added=commits_added, commits_total=store.commit_count(),
+            repo=name,
+            root=str(root),
+            commit=commit,
+            files_seen=len(files),
+            files_indexed=len(changed),
+            files_unchanged=len(files) - len(changed),
+            files_removed=len(removed),
+            chunks_total=store.counts()["chunks"],
+            commits_added=commits_added,
+            commits_total=store.commit_count(),
             seconds=round(time.monotonic() - started, 2),
             full_rebuild=full_rebuild,
         )
 
     # ---- retrieval ------------------------------------------------------------------------
-    def search(self, query: str, repo: str | None = None, k: int = 8, path_prefix: str | None = None,
-               kinds: list[str] | None = None) -> list[Hit]:
+    def search(
+        self,
+        query: str,
+        repo: str | None = None,
+        k: int = 8,
+        path_prefix: str | None = None,
+        kinds: list[str] | None = None,
+    ) -> list[Hit]:
         """Hybrid search: BM25 keywords and vector similarity, merged with reciprocal-rank fusion."""
         query = query.strip()
         if not query:
@@ -167,15 +189,28 @@ class Brain:
                 continue
             if kinds and chunk.kind not in kinds:
                 continue
-            hits.append(Hit(chunk=chunk, score=round(scores[chunk_id], 5),
-                            keyword_rank=keyword_rank.get(chunk_id), vector_rank=vector_rank.get(chunk_id)))
+            hits.append(
+                Hit(
+                    chunk=chunk,
+                    score=round(scores[chunk_id], 5),
+                    keyword_rank=keyword_rank.get(chunk_id),
+                    vector_rank=vector_rank.get(chunk_id),
+                )
+            )
             if len(hits) == k:
                 break
         return hits
 
     # ---- history --------------------------------------------------------------------------
-    def explain_history(self, repo: str | None, path: str | None = None, symbol: str | None = None,
-                        start: int | None = None, end: int | None = None, max_commits: int = 8) -> HistoryReport:
+    def explain_history(
+        self,
+        repo: str | None,
+        path: str | None = None,
+        symbol: str | None = None,
+        start: int | None = None,
+        end: int | None = None,
+        max_commits: int = 8,
+    ) -> HistoryReport:
         """How a function, a line range or a whole file came to be: blame shares, the commits that
         changed it (with the relevant diff), and the pull requests those commits came from."""
         name = self.resolve_repo(repo)
@@ -202,8 +237,17 @@ class Brain:
         except sources.SourceError as exc:
             raise BrainError(f"git couldn't read the history of {path}: {exc}") from exc
         slug = history.github_slug(root)
-        return HistoryReport(repo=name, path=path, start_line=start, end_line=end, symbol=symbol, blame=shares,
-                             changes=changes, pull_requests=self._pull_requests(store, slug, changes), github=slug)
+        return HistoryReport(
+            repo=name,
+            path=path,
+            start_line=start,
+            end_line=end,
+            symbol=symbol,
+            blame=shares,
+            changes=changes,
+            pull_requests=self._pull_requests(store, slug, changes),
+            github=slug,
+        )
 
     def search_history(self, query: str, repo: str | None = None, k: int = 5) -> list[Commit]:
         """Commits whose message matches the query (BM25)."""
@@ -239,8 +283,9 @@ class Brain:
         target = next(c for c in matches if c.path == target_path)
         return analysis.impact_of_change(store, target, (start, end), depth)
 
-    def find_doc_drift(self, repo: str | None, path_prefix: str | None = None, check_history: bool = True,
-                       limit: int = 50) -> DriftReport:
+    def find_doc_drift(
+        self, repo: str | None, path_prefix: str | None = None, check_history: bool = True, limit: int = 50
+    ) -> DriftReport:
         """Documentation that no longer matches the code."""
         store = self._store(self.resolve_repo(repo))
         return analysis.find_doc_drift(store, Path(store.get_meta()["root"]), path_prefix, check_history, limit)
@@ -257,10 +302,17 @@ class Brain:
         if "indexed_at" not in meta:
             return None
         counts = store.counts()
-        return RepoInfo(name=name, source=meta.get("source", ""), root=meta.get("root", ""),
-                        commit=meta.get("commit") or None, indexed_at=meta["indexed_at"],
-                        files=counts["files"], chunks=counts["chunks"], commits=store.commit_count(),
-                        languages=store.languages())
+        return RepoInfo(
+            name=name,
+            source=meta.get("source", ""),
+            root=meta.get("root", ""),
+            commit=meta.get("commit") or None,
+            indexed_at=meta["indexed_at"],
+            files=counts["files"],
+            chunks=counts["chunks"],
+            commits=store.commit_count(),
+            languages=store.languages(),
+        )
 
     def resolve_repo(self, repo: str | None) -> str:
         """The repo to use: the one named, or the only one indexed."""
@@ -312,8 +364,6 @@ class Brain:
         if not _NAME.match(name) or name.startswith("."):
             raise BrainError("Repo names may use letters, digits, '.', '_' and '-' only.")
         return name
-
-
 
 
 def _sha(text: str) -> str:

@@ -4,7 +4,7 @@ from project_brain_mcp.chunking import MAX_CHUNK_LINES, chunk_file
 
 
 def test_python_is_split_by_definition_with_exact_lines():
-    source = textwrap.dedent('''
+    source = textwrap.dedent("""
         import os
 
         @decorator
@@ -15,7 +15,7 @@ def test_python_is_split_by_definition_with_exact_lines():
         class Thing:
             def method(self):
                 return 2
-        ''').lstrip()
+        """).lstrip()
     chunks = chunk_file("mod.py", "python", source)
     by_symbol = {c.symbol: c for c in chunks}
 
