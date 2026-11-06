@@ -1,6 +1,8 @@
 # Project Brain MCP
 
+[![CI](https://github.com/Nomannazir/project-brain-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Nomannazir/project-brain-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
 
 An [MCP](https://modelcontextprotocol.io) server that gives AI agents a **cited, searchable memory of a codebase**.
 Point it at a local folder or a public git URL. Claude, Cursor or any MCP client can then ask questions about the
@@ -122,7 +124,10 @@ query  ─► BM25 top 50 ┐
 ## Development
 
 ```bash
-uv run pytest     # 38 tests, offline (hash embedder, temporary git repos, in-process MCP client)
+uv run pytest           # 38 tests, offline (hash embedder, temporary git repos, in-process MCP client)
+uv run ruff check .     # lint
+uv run ruff format .    # format
+uv run pyright          # types
 ```
 
 ## Roadmap
