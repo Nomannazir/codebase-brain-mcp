@@ -151,7 +151,8 @@ def _span(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> tuple[
 
 def _markdown_chunks(path: str, lines: list[str]) -> list[Chunk]:
     chunks: list[Chunk] = []
-    trail: list[str] = []
+    trail: list[tuple[int, str]] = []
+    """(level, heading) of each open heading; a new heading closes every one at its level or deeper."""
     section_start, section_symbol = 1, None
     in_fence = False
     for number, line in enumerate(lines, start=1):
@@ -163,8 +164,8 @@ def _markdown_chunks(path: str, lines: list[str]) -> list[Chunk]:
         if number > section_start:
             chunks.append(_make(path, lines, section_start, number - 1, "section", section_symbol))
         level = len(match.group(1))
-        trail = [*trail[: level - 1], match.group(2)]
-        section_start, section_symbol = number, " > ".join(trail)
+        trail = [*(open_ for open_ in trail if open_[0] < level), (level, match.group(2))]
+        section_start, section_symbol = number, " > ".join(heading for _, heading in trail)
     chunks.append(_make(path, lines, section_start, len(lines), "section", section_symbol))
     return [c for c in chunks if c.text.strip()]
 

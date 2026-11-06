@@ -49,3 +49,11 @@ def test_invalid_python_falls_back_to_windows():
 
 def test_empty_file_has_no_chunks():
     assert chunk_file("empty.py", "python", "\n\n") == []
+
+
+def test_markdown_heading_path_survives_skipped_levels():
+    # No H1, and H4s straight under an H2: siblings must not nest inside each other.
+    source = "## Benefits\n\nFast.\n\n## FAQ\n\n#### How do I start?\n\nRun it.\n\n#### How do I stop?\n\nStop it.\n"
+    symbols = [c.symbol for c in chunk_file("readme.md", "markdown", source)]
+
+    assert symbols == ["Benefits", "FAQ", "FAQ > How do I start?", "FAQ > How do I stop?"]
