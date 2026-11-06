@@ -31,3 +31,20 @@ jobs:
         run: uv run pyright
       - name: Tests
         run: uv run pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t project-brain-mcp:ci .
+      - name: Refuses to start publicly without a token
+        run: |
+          if docker run --rm project-brain-mcp:ci; then
+            echo "expected the server to refuse to start without PROJECT_BRAIN_TOKEN" && exit 1
+          fi
+      - name: Health check answers with a token
+        run: |
+          docker run -d --name brain -p 8765:8765 -e PROJECT_BRAIN_TOKEN="$(openssl rand -hex 24)" project-brain-mcp:ci
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8765/healthz && exit 0; sleep 1; done
+          docker logs brain && exit 1
