@@ -99,6 +99,16 @@ claude mcp add codebase-brain -- uvx codebase-brain-mcp
 { "command": "uvx", "args": ["codebase-brain-mcp"] }
 ```
 
+Optional: install the [skill](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/skills/codebase-brain/SKILL.md).
+It tells the agent which tool fits which question, to cite every claim, to check history before removing odd code,
+and to run impact analysis before editing.
+
+```bash
+mkdir -p ~/.claude/skills/codebase-brain
+curl -fsSL https://raw.githubusercontent.com/Nomannazir/codebase-brain-mcp/main/skills/codebase-brain/SKILL.md \
+  -o ~/.claude/skills/codebase-brain/SKILL.md
+```
+
 ## Quick start
 
 ```bash
