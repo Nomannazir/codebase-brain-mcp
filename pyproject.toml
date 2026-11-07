@@ -1,6 +1,6 @@
 [project]
 name = "codebase-brain-mcp"
-version = "0.2.0"
+version = "0.2.1"
 description = "An MCP server that gives AI agents a cited, searchable memory of a codebase."
 readme = "README.md"
 authors = [
