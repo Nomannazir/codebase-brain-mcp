@@ -74,7 +74,7 @@ A plug-in for any AI assistant that turns a codebase into something it can actua
 
 | Tool | What it does |
 |---|---|
-| `index_repo(source, name?)` | Index a local path or an `https://` git URL (shallow clone). Reports progress. |
+| `index_repo(source, name?)` | Index a local path or an `https://` git URL (blobless clone with full history). Reports progress. |
 | `ask_codebase(question, repo?, k?)` | The most relevant code and docs as cited sources, plus related commits, with instructions to answer only from them. |
 | `search(query, repo?, k?, path_prefix?, kinds?)` | Raw hybrid search, filterable by path and chunk kind. |
 | `explain_history(symbol? \| path, start_line?, end_line?, repo?)` | Every commit that changed a function or line range, newest first, with the relevant diff, current authorship, and PR titles and descriptions (GitHub). |
@@ -311,13 +311,14 @@ How it's measured:
 - **nDCG@10:** each target is credited once, so duplicate chunks don't inflate the score.
 - **Confidence intervals:** 95% bootstrap over questions, seeded.
 - **Relevance:** a result is relevant if it's in the target file and, when the target names a symbol, is that symbol
-  or one of its methods.
+  or one of its methods. A docs target can name a section (`FAQ > How do I stop retrying early?`), and then that
+  section or one of its subsections counts.
 - **Dataset rot:** the harness fails if a target no longer exists at the pinned commit.
 
 ## How it works
 
 ```
-source ─► resolve (local dir / shallow https clone) ─► list files (.gitignore-aware, skips binaries and lockfiles)
+source ─► resolve (local dir / blobless https clone) ─► list files (.gitignore-aware, skips binaries and lockfiles)
        ─► chunk (ast / tree-sitter / headings / windows) ─► embed (fastembed) ─► SQLite: chunks + vectors + FTS5
 query  ─► BM25 top 50 ┐
        ─► vector top 50 ┴─► reciprocal-rank fusion ─► filters ─► cited sources
@@ -337,7 +338,7 @@ query  ─► BM25 top 50 ┐
 ## Development
 
 ```bash
-uv run pytest           # 54 tests, offline (hash embedder, temporary git repos, in-process MCP client)
+uv run pytest           # 67 tests, offline (hash embedder, temporary git repos, in-process MCP client)
 uv run ruff check .     # lint
 uv run ruff format .    # format
 uv run pyright          # types

@@ -97,7 +97,7 @@ def default_name(source: str) -> str:
 
 
 def resolve(source: str, clone_dir: Path) -> Path:
-    """The repository's root on disk. URLs are shallow-cloned (or refreshed) under ``clone_dir``."""
+    """The repository's root on disk. URLs are cloned blobless (or refreshed) under ``clone_dir``."""
     if not is_url(source):
         root = Path(source).expanduser().resolve()
         if not root.is_dir():
