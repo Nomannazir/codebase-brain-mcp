@@ -25,6 +25,18 @@ async def test_tools_are_listed_with_read_only_hints(brain):
     assert tools["index_repo"].annotations.read_only_hint is False
 
 
+async def test_every_tool_says_when_to_use_it_and_documents_every_parameter(brain):
+    # Agents choose tools from these descriptions alone, so none may be vague or missing.
+    async with Client(build_server(brain)) as client:
+        tools = (await client.list_tools()).tools
+
+    for tool in tools:
+        assert "Use " in (tool.description or ""), f"{tool.name} doesn't say when to use it"
+        assert "\n " not in (tool.description or ""), f"{tool.name} description keeps docstring indentation"
+        for name, schema in tool.input_schema.get("properties", {}).items():
+            assert schema.get("description"), f"{tool.name}.{name} has no description"
+
+
 async def test_index_then_ask_returns_cited_structured_sources(brain, sample_repo):
     async with Client(build_server(brain)) as client:
         indexed = await client.call_tool("index_repo", {"source": str(sample_repo)})

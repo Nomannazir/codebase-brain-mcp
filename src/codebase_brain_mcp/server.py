@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
+from collections.abc import Callable
+from typing import Annotated, Any
+
 import anyio
 import anyio.from_thread
 import anyio.to_thread
@@ -28,6 +32,16 @@ Cite code as path:start-end and commits by short sha."""
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 MAX_RESULTS = 25
 SNIPPET_CHARS = 1_800
+
+# Parameters shared by several tools, described once so every tool explains them the same way.
+Repo = Annotated[
+    str | None,
+    Field(description="Name of an indexed repo, as list_repos shows it. Leave out when only one repo is indexed."),
+]
+ResultCount = Annotated[int, Field(description=f"How many results to return, 1 to {MAX_RESULTS}.")]
+PathPrefix = Annotated[
+    str | None, Field(description='Only consider files under this path, e.g. "src/auth/" or "docs/".')
+]
 
 
 class IndexResult(BaseModel):
@@ -164,14 +178,23 @@ def build_server(brain: Brain | None = None) -> MCPServer:
     brain = brain or Brain(load_settings())
     server = MCPServer("codebase-brain", instructions=INSTRUCTIONS, version=__version__)
 
-    @server.tool(
-        annotations=ToolAnnotations(
-            read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=True
-        )
+    @_tool(
+        server,
+        ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=True),
     )
-    async def index_repo(source: str, ctx: Context, name: str | None = None) -> IndexResult:
-        """Index a repository so it can be searched. `source` is a local directory or an https git URL
-        (cloned shallowly). Re-running only re-embeds files that changed since the last run."""
+    async def index_repo(
+        source: Annotated[
+            str, Field(description="A local directory, or an https git URL such as https://github.com/owner/repo.")
+        ],
+        ctx: Context,
+        name: Annotated[
+            str | None, Field(description="Name to index it under. Defaults to the folder or repository name.")
+        ] = None,
+    ) -> IndexResult:
+        """Index a repository so the other tools can search it. Use this first, and again after the code
+        changes: re-running only re-embeds files whose content changed. A URL is cloned with full history
+        (blobless), so explain_history works. Reports progress while it runs, and returns file counts and
+        the commit indexed."""
 
         def progress(done: int, total: int, message: str) -> None:
             anyio.from_thread.run(ctx.report_progress, done, total, message)
@@ -182,19 +205,37 @@ def build_server(brain: Brain | None = None) -> MCPServer:
             raise ToolError(str(exc)) from exc
         return IndexResult(**report.__dict__)
 
-    @server.tool(annotations=READ_ONLY)
+    @_tool(server, READ_ONLY)
     async def search(
-        query: str, repo: str | None = None, k: int = 8, path_prefix: str | None = None, kinds: list[str] | None = None
+        query: Annotated[str, Field(description="An identifier (normalizeRetryOptions) or plain words.")],
+        repo: Repo = None,
+        k: ResultCount = 8,
+        path_prefix: PathPrefix = None,
+        kinds: Annotated[
+            list[str] | None,
+            Field(
+                description="Only these chunk kinds: function, class, method, interface, type, enum, "
+                "module, section (docs) or code (other files)."
+            ),
+        ] = None,
     ) -> SearchResult:
-        """Hybrid search (BM25 keywords + embeddings, fused by rank). Filter by `path_prefix`
-        (e.g. "src/auth/") or `kinds` (function, class, method, interface, type, enum, module, section, code)."""
+        """Hybrid search over code and docs (BM25 keywords plus local embeddings, fused by rank). Use this
+        for a targeted lookup, or when you need filters by folder or chunk kind; for a question you'll answer
+        in prose, use ask_codebase instead. Returns ranked chunks, each with a path:start-end citation,
+        its symbol and a snippet."""
         hits = await _search(brain, query, repo, k, path_prefix, kinds)
         return SearchResult(repo=brain.resolve_repo(repo), query=query, results=[_source(h) for h in hits])
 
-    @server.tool(annotations=READ_ONLY)
-    async def ask_codebase(question: str, repo: str | None = None, k: int = 8) -> AskResult:
-        """Gather the code and docs most relevant to a question, as numbered, cited sources.
-        Answer from these sources only, citing each claim as path:start-end."""
+    @_tool(server, READ_ONLY)
+    async def ask_codebase(
+        question: Annotated[str, Field(description='A question in plain words, e.g. "How are sessions expired?"')],
+        repo: Repo = None,
+        k: ResultCount = 8,
+    ) -> AskResult:
+        """Gather the code and docs most relevant to a question, plus related commits, as numbered,
+        cited sources. Use this to answer "how does X work?" or "where is Y handled?" questions. Answer
+        from these sources only and cite each claim as path:start-end; open a source in full with
+        read_lines. For filters, use search."""
         hits = await _search(brain, question, repo, k, None, None)
         commits = await _call(lambda: brain.search_history(question, repo, 3))
         instructions = (
@@ -212,57 +253,95 @@ def build_server(brain: Brain | None = None) -> MCPServer:
             related_commits=[_commit(c) for c in commits],
         )
 
-    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=True))
+    @_tool(server, ToolAnnotations(read_only_hint=True, open_world_hint=True))
     async def explain_history(
-        repo: str | None = None,
-        symbol: str | None = None,
-        path: str | None = None,
-        start_line: int | None = None,
-        end_line: int | None = None,
-        max_commits: int = 8,
+        repo: Repo = None,
+        symbol: Annotated[
+            str | None,
+            Field(description='A function, class or method, e.g. "unsign" or "Signer.sign". Use this or path.'),
+        ] = None,
+        path: Annotated[
+            str | None, Field(description="A file in the repo. Narrow it with start_line and end_line.")
+        ] = None,
+        start_line: Annotated[int | None, Field(description="First line of the range (with path).")] = None,
+        end_line: Annotated[int | None, Field(description="Last line of the range (with path).")] = None,
+        max_commits: Annotated[int, Field(description="How many commits to return, newest first.")] = 8,
     ) -> HistoryResult:
-        """Why code looks the way it does. Give a `symbol` (e.g. "unsign" or "Signer.sign"), or a `path`
-        with optional line range. Returns who wrote the current lines, every commit that changed them
-        (with the relevant diff), and the pull requests behind those commits."""
+        """Why code looks the way it does. Use this before removing or rewriting code that looks odd, or
+        to answer "why is it like this?". Give a symbol, or a path with an optional line range. Returns
+        who wrote the current lines, every commit that changed them (with the relevant diff), and the
+        title and description of the pull request behind each commit (GitHub only)."""
         report = await _call(lambda: brain.explain_history(repo, path, symbol, start_line, end_line, max_commits))
         return _history(report)
 
-    @server.tool(annotations=READ_ONLY)
+    @_tool(server, READ_ONLY)
     async def impact_of_change(
-        symbol: str, repo: str | None = None, path: str | None = None, depth: int = 2
+        symbol: Annotated[
+            str, Field(description='The function, class or method you plan to change, e.g. "discount" or "Cart.total".')
+        ],
+        repo: Repo = None,
+        path: Annotated[
+            str | None, Field(description="The file that defines symbol, when several files define that name.")
+        ] = None,
+        depth: Annotated[
+            int, Field(description="1 = direct users only; 2 or 3 also follows users of those users.")
+        ] = 2,
     ) -> ImpactResult:
-        """What breaks if `symbol` changes: code that uses it directly, code that uses that code
-        (up to `depth`, max 3), and the tests involved. Python, JavaScript and TypeScript are analysed structurally."""
+        """What breaks if a symbol changes: code that uses it directly, code that uses that code, and the
+        tests involved. Use this before editing a shared function, and run or update the tests it lists.
+        Python, JavaScript and TypeScript are analysed structurally. Matches are by name, so check the
+        same-name notes it returns."""
         report = await _call(lambda: brain.impact_of_change(repo, symbol, path, depth))
         return _impact(report)
 
-    @server.tool(annotations=ToolAnnotations(read_only_hint=True, open_world_hint=False))
+    @_tool(server, ToolAnnotations(read_only_hint=True, open_world_hint=False))
     async def find_doc_drift(
-        repo: str | None = None, path_prefix: str | None = None, check_history: bool = True, limit: int = 50
+        repo: Repo = None,
+        path_prefix: PathPrefix = None,
+        check_history: Annotated[
+            bool, Field(description="Also flag doc sections last edited long before the code they describe.")
+        ] = True,
+        limit: Annotated[int, Field(description="Most findings to return, 1 to 200, most severe first.")] = 50,
     ) -> DriftResult:
-        """Documentation that no longer matches the code: files, functions, settings and flags that don't
-        exist; examples passing parameters a function doesn't take; imports that would fail; and docs last
-        edited long before the code they describe changed. Each finding cites the doc section."""
+        """Documentation that no longer matches the code. Use this to check a README or docs folder, or
+        before a release. Finds files, functions, settings and flags that don't exist; code examples that
+        pass parameters a function doesn't take; imports that would fail; and stale sections. Each finding
+        has a severity, cites the doc section and suggests a fix. Changelogs are skipped."""
         report = await _call(lambda: brain.find_doc_drift(repo, path_prefix, check_history, max(1, min(limit, 200))))
         return _drift(brain.resolve_repo(repo), report)
 
-    @server.tool(annotations=READ_ONLY)
-    async def search_history(query: str, repo: str | None = None, k: int = 5) -> list[CommitInfo]:
-        """Find commits by what their messages say, e.g. "fix timezone" or "drop python 3.8"."""
+    @_tool(server, READ_ONLY)
+    async def search_history(
+        query: Annotated[
+            str, Field(description='Words from commit messages, e.g. "fix timezone" or "drop python 3.8".')
+        ],
+        repo: Repo = None,
+        k: ResultCount = 5,
+    ) -> list[CommitInfo]:
+        """Find commits by what their messages say. Use this to answer "when did we change X?" or "which
+        commit fixed Y?". For the history of one function or file, use explain_history instead."""
         commits = await _call(lambda: brain.search_history(query, repo, max(1, min(k, MAX_RESULTS))))
         return [_commit(c) for c in commits]
 
-    @server.tool(annotations=READ_ONLY)
-    async def read_lines(path: str, start: int, end: int, repo: str | None = None) -> str:
-        """Exact, numbered lines from a file in an indexed repo, e.g. to open a citation in full."""
+    @_tool(server, READ_ONLY)
+    async def read_lines(
+        path: Annotated[str, Field(description="The file, relative to the repo root, as a citation shows it.")],
+        start: Annotated[int, Field(description="First line to return (1-based).")],
+        end: Annotated[int, Field(description="Last line to return (inclusive).")],
+        repo: Repo = None,
+    ) -> str:
+        """Exact, numbered lines from a file in an indexed repo. Use this to open a citation in full
+        before quoting or editing it, since search results are trimmed snippets. Refuses paths outside
+        the repo."""
         try:
             return brain.read_lines(repo, path, start, end)
         except BrainError as exc:
             raise ToolError(str(exc)) from exc
 
-    @server.tool(annotations=READ_ONLY)
+    @_tool(server, READ_ONLY)
     async def list_repos() -> list[RepoSummary]:
-        """Repositories indexed so far, with size, languages and the commit they were indexed at."""
+        """Repositories indexed so far, with their size, languages and the commit they were indexed at.
+        Use this first to see what's available and to get the repo names the other tools take."""
         return [_summary(info) for info in brain.repos()]
 
     @server.resource(
@@ -286,6 +365,15 @@ def build_server(brain: Brain | None = None) -> MCPServer:
         )
 
     return server
+
+
+def _tool(server: MCPServer, annotations: ToolAnnotations) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Register a tool with its docstring, dedented: clients show descriptions as they are sent."""
+
+    def register(fn: Callable[..., Any]) -> Callable[..., Any]:
+        return server.tool(annotations=annotations, description=inspect.cleandoc(fn.__doc__ or ""))(fn)
+
+    return register
 
 
 async def _search(
