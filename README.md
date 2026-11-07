@@ -88,20 +88,62 @@ Also included: the resource `brain://repos`, and the prompt `answer_with_citatio
 
 ## Install
 
-Codebase Brain runs on your own machine, so there's no server or account, and it's free. With
-[uv](https://docs.astral.sh/uv/):
+Codebase Brain runs on your own machine, so there's no server or account, and it's free. It works with any
+MCP-compatible assistant. All you need is [uv](https://docs.astral.sh/uv/), and every client runs the same command:
+`uvx codebase-brain-mcp`.
+
+**Claude Code**
 
 ```bash
-# Claude Code
 claude mcp add codebase-brain -- uvx codebase-brain-mcp
-
-# Any MCP client (Claude Desktop, Cursor, ...): add this server to its config
-{ "command": "uvx", "args": ["codebase-brain-mcp"] }
 ```
+
+**Cursor:** `~/.cursor/mcp.json` (all projects) or `.cursor/mcp.json` (one project)
+
+```json
+{
+  "mcpServers": {
+    "codebase-brain": { "command": "uvx", "args": ["codebase-brain-mcp"] }
+  }
+}
+```
+
+**Claude Desktop:** Settings → Developer → Edit Config (`claude_desktop_config.json`), then restart the app
+
+```json
+{
+  "mcpServers": {
+    "codebase-brain": { "command": "uvx", "args": ["codebase-brain-mcp"] }
+  }
+}
+```
+
+**VS Code (GitHub Copilot agent mode):** `.vscode/mcp.json`
+
+```json
+{
+  "servers": {
+    "codebase-brain": { "type": "stdio", "command": "uvx", "args": ["codebase-brain-mcp"] }
+  }
+}
+```
+
+**Windsurf:** `~/.codeium/windsurf/mcp_config.json`. **Gemini CLI:** `~/.gemini/settings.json`. Both use the same
+`mcpServers` block as Cursor.
+
+**OpenAI Codex CLI**
+
+```bash
+codex mcp add codebase-brain -- uvx codebase-brain-mcp
+```
+
+> **Tool doesn't start?** Desktop apps often don't see your shell's `PATH`. Run `which uvx` and put that full
+> path in `"command"`, for example `"/Users/you/.local/bin/uvx"`.
 
 Optional: install the [skill](https://github.com/Nomannazir/codebase-brain-mcp/blob/main/skills/codebase-brain/SKILL.md).
 It tells the agent which tool fits which question, to cite every claim, to check history before removing odd code,
-and to run impact analysis before editing.
+and to run impact analysis before editing. For Claude Code, run the commands below. Other agents that read
+`SKILL.md` files take the same file in their own skills folder.
 
 ```bash
 mkdir -p ~/.claude/skills/codebase-brain
@@ -135,7 +177,7 @@ src/itsdangerous/timed.py:72-158
   ...
 ```
 
-### Use it from Claude Code
+### Use a local checkout instead (for development)
 
 ```bash
 claude mcp add codebase-brain -- uv run --directory /path/to/codebase-brain-mcp codebase-brain
